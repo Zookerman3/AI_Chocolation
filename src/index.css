@@ -12,5 +12,284 @@ body {
 .shell {
   max-width: 720px;
   margin: 0 auto;
-  padding: 48px 16px;
+  padding: 24px 16px 64px;
+}
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.app-header h1 {
+  font-size: 1.5rem;
+  margin: 0;
+}
+
+.demo-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+}
+
+.app-nav {
+  display: flex;
+  gap: 8px;
+  margin: 16px 0 24px;
+  border-bottom: 1px solid #ddd;
+}
+
+.app-nav button {
+  background: none;
+  border: none;
+  padding: 8px 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  color: #6b6f80;
+  border-bottom: 2px solid transparent;
+}
+
+.app-nav button[aria-current='true'] {
+  color: #1d2030;
+  border-bottom-color: #1d2030;
+  font-weight: 600;
+}
+
+.box-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.box-toolbar h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.box-timer {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  color: #6b6f80;
+}
+
+.size-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.size-picker button {
+  min-width: 64px;
+  padding: 16px;
+  font-size: 1.25rem;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background: white;
+  cursor: pointer;
+}
+
+.flavor-grid {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+}
+
+.flavor-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  font-size: 0.7rem;
+  text-align: center;
+}
+
+.flavor-tile:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.flavor-tile img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 6px;
+  background: #eceaf0; /* shows as a neutral placeholder while the image loads */
+}
+
+.flavor-tile:focus-visible {
+  outline: 2px solid #1d2030;
+  outline-offset: 2px;
+}
+
+.flavor-tile--empty {
+  visibility: hidden;
+}
+
+.flavor-tile--selected {
+  outline: 2px solid #1d2030;
+}
+
+.flavor-tile--dim {
+  opacity: 0.35;
+}
+
+.flavor-tile-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  justify-content: center;
+}
+
+.badge {
+  font-size: 0.55rem;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: #eceaf0;
+  color: #6b6f80;
+  line-height: 1.4;
+}
+
+.badge-seasonal {
+  background: #f3e2b8;
+  color: #7a5c14;
+}
+
+.flavor-search {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  margin: 12px 0;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.box-tally {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.box-tally li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border: 1px solid #ddd;
+  border-radius: 999px;
+  background: white;
+  font-size: 0.8rem;
+}
+
+.box-tally-count {
+  font-variant-numeric: tabular-nums;
+  color: #6b6f80;
+}
+
+.box-tally-step {
+  width: 22px;
+  height: 22px;
+  line-height: 1;
+  border-radius: 50%;
+  border: 1px solid #ccc;
+  background: white;
+  cursor: pointer;
+  padding: 0;
+}
+
+.box-tally-step:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.box-toolbar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.box-actions,
+.records-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.box-actions button,
+.records-actions button,
+.box-toolbar button {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  background: white;
+  cursor: pointer;
+}
+
+.box-actions button:disabled,
+.records-actions button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.records-list {
+  list-style: none;
+  padding: 0;
+}
+
+.records-list li {
+  padding: 12px 0;
+  border-top: 1px solid #eee;
+}
+
+.stats-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stats-bars {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.stats-bars li {
+  display: grid;
+  grid-template-columns: 140px 1fr 32px;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.stats-bar-track {
+  background: #eee;
+  border-radius: 4px;
+  overflow: hidden;
+  height: 10px;
+}
+
+.stats-bar-fill {
+  display: block;
+  height: 100%;
+  background: #1d2030;
+}
+
+.stats-bar-count {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }

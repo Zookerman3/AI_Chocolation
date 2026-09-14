@@ -1,0 +1,171 @@
+import { fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { BoxScreen } from './BoxScreen.tsx'
+import { listRecords } from '../records/records.ts'
+import { defaultLayout, loadLayout } from '../layout/caseLayout.ts'
+import { FLAVORS } from '../../data/flavors.ts'
+
+beforeEach(() => {
+  localStorage.clear()
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
+
+describe('BoxScreen', () => {
+  it('assembles a full 6-piece box by tapping tiles, saves it, and records it', () => {
+    render(<BoxScreen />)
+
+    fireEvent.click(screen.getByRole('button', { name: '6' }))
+    expect(screen.getByRole('heading', { name: '0 / 6' })).toBeInTheDocument()
+
+    const firstFlavor = FLAVORS[0]
+    const tile = screen.getByRole('button', { name: new RegExp(firstFlavor.name) })
+
+    for (let i = 0; i < 6; i++) fireEvent.click(tile)
+    expect(screen.getByRole('heading', { name: '6 / 6' })).toBeInTheDocument()
+
+    const saveButton = screen.getByRole('button', { name: 'Save box' })
+    expect(saveButton).not.toBeDisabled()
+    fireEvent.click(saveButton)
+
+    const records = listRecords()
+    expect(records).toHaveLength(1)
+    expect(records[0].size).toBe(6)
+    expect(records[0].pieces).toEqual([{ flavorId: firstFlavor.id, count: 6 }])
+    expect(records[0].demo).toBe(false)
+
+    // back at the size picker, with a confirmation of what just saved
+    expect(screen.getByRole('heading', { name: 'Pick a box size' })).toBeInTheDocument()
+    expect(screen.getByText(/Saved 6-piece box in/)).toBeInTheDocument()
+  })
+
+  it('undo removes the last tapped piece', () => {
+    render(<BoxScreen />)
+    fireEvent.click(screen.getByRole('button', { name: '6' }))
+
+    const [a, b] = FLAVORS
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(a.name) }))
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(b.name) }))
+    expect(screen.getByRole('heading', { name: '2 / 6' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    expect(screen.getByRole('heading', { name: '1 / 6' })).toBeInTheDocument()
+  })
+
+  it('rearrange mode swaps two grid positions instead of adding pieces to a box', () => {
+    render(<BoxScreen />)
+    const before = loadLayout()
+    const [a, b] = FLAVORS // default layout places these at cells 0 and 1
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rearrange case' }))
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(a.name) }))
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(b.name) }))
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }))
+
+    const after = loadLayout()
+    expect(before.cells[0]).toBe(a.id)
+    expect(before.cells[1]).toBe(b.id)
+    expect(after.cells[0]).toBe(b.id)
+    expect(after.cells[1]).toBe(a.id)
+  })
+
+  it('handles the largest box size (50 pieces, tapped one at a time)', () => {
+    render(<BoxScreen />)
+    fireEvent.click(screen.getByRole('button', { name: '50' }))
+
+    const tile = screen.getByRole('button', { name: new RegExp(FLAVORS[0].name) })
+    for (let i = 0; i < 50; i++) fireEvent.click(tile)
+    expect(screen.getByRole('heading', { name: '50 / 50' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save box' }))
+    expect(listRecords()[0].pieces).toEqual([{ flavorId: FLAVORS[0].id, count: 50 }])
+  })
+
+  it('asks for confirmation before discarding a box with pieces already tapped', () => {
+    render(<BoxScreen />)
+    fireEvent.click(screen.getByRole('button', { name: '6' }))
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(FLAVORS[0].name) }))
+
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(confirmSpy).toHaveBeenCalledOnce()
+    // declined the confirm, so the box is still in progress
+    expect(screen.getByRole('heading', { name: '1 / 6' })).toBeInTheDocument()
+
+    confirmSpy.mockReturnValue(true)
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.getByRole('heading', { name: 'Pick a box size' })).toBeInTheDocument()
+  })
+
+  it('cancels an empty box without asking for confirmation', () => {
+    render(<BoxScreen />)
+    fireEvent.click(screen.getByRole('button', { name: '6' }))
+    const confirmSpy = vi.spyOn(window, 'confirm')
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(confirmSpy).not.toHaveBeenCalled()
+    expect(screen.getByRole('heading', { name: 'Pick a box size' })).toBeInTheDocument()
+  })
+
+  it('the running tally shows per-flavor counts, and its + button adds without re-tapping the tile', () => {
+    render(<BoxScreen />)
+    fireEvent.click(screen.getByRole('button', { name: '6' }))
+    const [a] = FLAVORS
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(a.name) }))
+
+    expect(screen.getByText(a.name, { selector: '.box-tally-name' })).toBeInTheDocument()
+    expect(screen.getByText('×1')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: `Add one more ${a.name}` }))
+    expect(screen.getByText('×2')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '2 / 6' })).toBeInTheDocument()
+  })
+
+  it("the tally's − button removes one of that flavor specifically, leaving others alone", () => {
+    render(<BoxScreen />)
+    fireEvent.click(screen.getByRole('button', { name: '6' }))
+    const [a, b] = FLAVORS
+    // grab both tile buttons once, before any tally chips exist to make the name ambiguous
+    const tileA = screen.getByRole('button', { name: new RegExp(a.name) })
+    const tileB = screen.getByRole('button', { name: new RegExp(b.name) })
+    fireEvent.click(tileA)
+    fireEvent.click(tileB)
+    fireEvent.click(tileA)
+    expect(screen.getByRole('heading', { name: '3 / 6' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: `Remove one ${a.name}` }))
+    expect(screen.getByRole('heading', { name: '2 / 6' })).toBeInTheDocument()
+    // a went from x2 to x1, b is untouched at x1 — both tally chips now read "×1"
+    const counts = screen.getAllByText(/×\d/)
+    expect(counts).toHaveLength(2)
+    expect(counts.map((el) => el.textContent)).toEqual(['×1', '×1'])
+  })
+
+  it('dims non-matching tiles when searching, without blocking a tap on them', () => {
+    render(<BoxScreen />)
+    fireEvent.click(screen.getByRole('button', { name: '6' }))
+    const [a, b] = FLAVORS
+
+    fireEvent.change(screen.getByPlaceholderText('Find a flavor…'), { target: { value: a.name } })
+    const nonMatch = screen.getByRole('button', { name: new RegExp(b.name) })
+    expect(nonMatch.className).toContain('flavor-tile--dim')
+
+    fireEvent.click(nonMatch)
+    expect(screen.getByRole('heading', { name: '1 / 6' })).toBeInTheDocument()
+  })
+
+  it('resets a rearranged case layout back to default', () => {
+    render(<BoxScreen />)
+    const [a, b] = FLAVORS
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rearrange case' }))
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(a.name) }))
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(b.name) }))
+    expect(loadLayout().cells[0]).toBe(b.id)
+
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    fireEvent.click(screen.getByRole('button', { name: 'Reset to default' }))
+    expect(loadLayout()).toEqual(defaultLayout())
+  })
+})

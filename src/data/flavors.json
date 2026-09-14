@@ -1,0 +1,315 @@
+{
+  "fetchedAt": "2026-09-14T18:00:26.633Z",
+  "source": "https://cocoadolce.com/products.json?limit=250",
+  "flavors": [
+    {
+      "id": "amaretto",
+      "name": "Amaretto",
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0263/5254/9985/files/amaretto-almond-gourmet-chocolate.png?v=1773678641",
+      "chocolate": "white",
+      "allergens": [
+        "Milk",
+        "Soy"
+      ],
+      "seasonal": false,
+      "sourceUrl": "https://cocoadolce.com/products/amaretto"
+    },
+    {
+      "id": "bananas-foster",
+      "name": "Bananas Foster",
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0263/5254/9985/files/banana-foster-dark-chocolate.png?v=1773678684",
+      "chocolate": "white",
+      "allergens": [
+        "Alcohol",
+        "Milk",
+        "Soy"
+      ],
+      "seasonal": false,
+      "sourceUrl": "https://cocoadolce.com/products/bananas-foster"
+    },
+    {
+      "id": "brownie-batter",
+      "name": "Brownie Batter",
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0263/5254/9985/files/brownie-batter-dark-chocolate-truffle.png?v=1773678829",
+      "chocolate": "white",
+      "allergens": [
+        "Milk",
+        "Soy"
+      ],
+      "seasonal": false,
+      "sourceUrl": "https://cocoadolce.com/products/brownie-batter"
+    },
+    {
+      "id": "caramel-apple-cider",
+      "name": "Caramel Apple Cider",
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0263/5254/9985/files/caramel-apple-cider-gourmet-chocolate.png?v=1773688624",
+      "chocolate": null,
+      "allergens": [
+        "Milk",
+        "Soy"
+      ],
+      "seasonal": false,
+      "sourceUrl": "https://cocoadolce.com/products/caramel-apple-cider"
+    },
+    {
+      "id": "champagne",
+      "name": "Champagne",
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0263/5254/9985/files/champagne-sparkling-gourmet-chocolate.png?v=1773678938",
+      "chocolate": null,
+      "allergens": [
+        "Alcohol",
+        "Milk",
+        "Soy"
+      ],
+      "seasonal": false,
+      "sourceUrl": "https://cocoadolce.com/products/champagne"
+    },
+    {
+      "id": "cheesecake",
+      "name": "Cheesecake",
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0263/5254/9985/files/cheesecake-white-chocolate-truffle.png?v=1773678986",
+      "chocolate": "dark",
+      "allergens": [
+        "Gluten",
+        "Milk",
+        "Soy"
+      ],
+      "seasonal": false,
+      "sourceUrl": "https://cocoadolce.com/products/cheesecake"
+    },
+    {
+      "id": "confetti-cake",
+      "name": "Confetti Cake",
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0263/5254/9985/files/confetti-cake-gold-chocolate-truffle.png?v=1773679016",
+      "chocolate": "white",
+      "allergens": [
+        "Milk",
+        "Soy"
+      ],
+      "seasonal": false,
+      "sourceUrl": "https://cocoadolce.com/products/amaretto-copy"
+    },
+    {
+      "id": "cookies-cream",
+      "name": "Cookies & Cream",
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0263/5254/9985/files/cookies-and-cream-gourmet-chocolate.png?v=1773679079",
+      "chocolate": null,
+      "allergens": [
+        "Milk",
+        "Soy"
+      ],
+      "seasonal": false,
+      "sourceUrl": "https://cocoadolce.com/products/cookies-cream-1"
+    },
+    {
+      "id": "creme-brulee",
+      "name": "Crème Brulée",
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0263/5254/9985/files/creme-brulee-dessert-chocolate.png?v=1773679232",
+      "chocolate": null,
+      "allergens": [
+        "Egg",
+        "Milk",
+        "Soy"
+      ],
+      "seasonal": false,
+      "sourceUrl": "https://cocoadolce.com/products/creme-brulee"
+    },
+    {
+      "id": "dulce-de-leche",
+      "name": "Dulce de Leche",
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0263/5254/9985/files/DulceDeLeche.png?v=1762448265",
+      "chocolate": null,
+      "allergens": [
+        "Alcohol",
+        "Milk",
+        "Soy"
+      ],
+      "seasonal": false,
+      "sourceUrl": "https://cocoadolce.com/products/dulce-de-leche"
+    },
+    {
+      "id": "espresso-martini",
+      "name": "Espresso Martini",
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0263/5254/9985/files/espresso-martini-coffee-chocolate.png?v=1773697393",
+      "chocolate": null,
+      "allergens": [
+        "Alcohol",
+        "Milk",
+        "Soy"
+      ],
+      "seasonal": false,
+      "sourceUrl": "https://cocoadolce.com/products/espresso-martini"
+    },
+    {
+      "id": "grey-salt-caramel",
+      "name": "Grey Salt Caramel",
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0263/5254/9985/files/french-grey-salt-caramel-chocolate.png?v=1773679344",
+      "chocolate": null,
+      "allergens": [
+        "Milk",
+        "Soy"
+      ],
+      "seasonal": false,
+      "sourceUrl": "https://cocoadolce.com/products/grey-salt-caramel"
+    },
+    {
+      "id": "key-lime-pie",
+      "name": "Key Lime Pie",
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0263/5254/9985/files/key-lime-pie-white-chocolate.png?v=1773679379",
+      "chocolate": null,
+      "allergens": [
+        "Milk",
+        "Soy"
+      ],
+      "seasonal": false,
+      "sourceUrl": "https://cocoadolce.com/products/key-lime"
+    },
+    {
+      "id": "lemon",
+      "name": "Lemon",
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0263/5254/9985/files/lemon-citrus-white-chocolate.png?v=1773679414",
+      "chocolate": null,
+      "allergens": [
+        "Milk",
+        "Soy"
+      ],
+      "seasonal": false,
+      "sourceUrl": "https://cocoadolce.com/products/lemon"
+    },
+    {
+      "id": "manhattan",
+      "name": "Manhattan",
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0263/5254/9985/files/manhattan-whiskey-chocolate.png?v=1773679462",
+      "chocolate": null,
+      "allergens": [],
+      "seasonal": false,
+      "sourceUrl": "https://cocoadolce.com/products/manhattan"
+    },
+    {
+      "id": "maple-cream",
+      "name": "Maple Cream",
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0263/5254/9985/files/bourbon-barrel-maple-cream-chocolate.png?v=1773688676",
+      "chocolate": "white",
+      "allergens": [
+        "Milk",
+        "Soy"
+      ],
+      "seasonal": false,
+      "sourceUrl": "https://cocoadolce.com/products/maple-cream"
+    },
+    {
+      "id": "peanut-butter-caramel",
+      "name": "Peanut Butter Caramel",
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0263/5254/9985/files/PeanutButterCaramel.png?v=1762448308",
+      "chocolate": null,
+      "allergens": [
+        "Milk",
+        "Soy"
+      ],
+      "seasonal": false,
+      "sourceUrl": "https://cocoadolce.com/products/peanut-butter-caramel"
+    },
+    {
+      "id": "pineapple-moscato",
+      "name": "Pineapple Moscato",
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0263/5254/9985/files/pineapple-moscato-tropical-chocolate.png?v=1773679550",
+      "chocolate": null,
+      "allergens": [
+        "Alcohol",
+        "Milk",
+        "Soy"
+      ],
+      "seasonal": false,
+      "sourceUrl": "https://cocoadolce.com/products/pineapple-moscato"
+    },
+    {
+      "id": "pistachio",
+      "name": "Pistachio",
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0263/5254/9985/files/pistachio-nut-gourmet-chocolate.png?v=1773679585",
+      "chocolate": null,
+      "allergens": [
+        "Milk",
+        "Nut",
+        "Soy"
+      ],
+      "seasonal": false,
+      "sourceUrl": "https://cocoadolce.com/products/pistachio"
+    },
+    {
+      "id": "pumpkin-spice-latte",
+      "name": "Pumpkin Spice Latte",
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0263/5254/9985/files/pumpkin-spice-latte-gourmet-chocolate..png?v=1773688711",
+      "chocolate": null,
+      "allergens": [
+        "Milk",
+        "Soy"
+      ],
+      "seasonal": false,
+      "sourceUrl": "https://cocoadolce.com/products/pumpkin-spice"
+    },
+    {
+      "id": "raspberry",
+      "name": "Raspberry",
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0263/5254/9985/files/raspberry-dark-chocolate-truffle..png?v=1773679654",
+      "chocolate": null,
+      "allergens": [
+        "Alcohol",
+        "Milk",
+        "Soy"
+      ],
+      "seasonal": false,
+      "sourceUrl": "https://cocoadolce.com/products/raspberry"
+    },
+    {
+      "id": "smores",
+      "name": "S'Mores",
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0263/5254/9985/files/smores-marshmallow-gourmet-chocolate.png?v=1773688739",
+      "chocolate": "dark",
+      "allergens": [
+        "Egg",
+        "Milk",
+        "Nut",
+        "Soy"
+      ],
+      "seasonal": false,
+      "sourceUrl": "https://cocoadolce.com/products/smores-1"
+    },
+    {
+      "id": "salted-caramel",
+      "name": "Salted Caramel",
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0263/5254/9985/files/salted-caramel-dark-milk-chocolate.png?v=1773679695",
+      "chocolate": null,
+      "allergens": [
+        "Milk",
+        "Soy"
+      ],
+      "seasonal": false,
+      "sourceUrl": "https://cocoadolce.com/products/salted-caramel"
+    },
+    {
+      "id": "tea-honey",
+      "name": "Tea & Honey",
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0263/5254/9985/files/earl-grey-honey-gourmet-chocolate.png?v=1773680112",
+      "chocolate": "white",
+      "allergens": [
+        "Milk",
+        "Soy"
+      ],
+      "seasonal": false,
+      "sourceUrl": "https://cocoadolce.com/products/confetti-cake-copy"
+    },
+    {
+      "id": "turtle",
+      "name": "Turtle",
+      "imageUrl": "https://cdn.shopify.com/s/files/1/0263/5254/9985/files/turtle-pecan-caramel-chocolate.png?v=1773680143",
+      "chocolate": null,
+      "allergens": [
+        "Milk",
+        "Nut",
+        "Soy"
+      ],
+      "seasonal": false,
+      "sourceUrl": "https://cocoadolce.com/products/turtle"
+    }
+  ]
+}

@@ -108,12 +108,12 @@ then only change files in your own area unless the issue says otherwise.
 
 | Area (folder) | What lives there | Owner |
 |---|---|---|
-| `src/app/` | App shell, navigation, demo mode | _TBD_ |
-| `src/data/` + `scripts/fetch-flavors.mjs` | Flavor catalog from the public store feed | _TBD_ |
-| `src/features/box/` | Box session logic and the box screen | _TBD_ |
-| `src/features/layout/` | Flavor tile grid and case layout editor | _TBD_ |
-| `src/features/records/` | Saved box records, CSV/JSON export, records screen | _TBD_ |
-| `src/features/stats/` | Most-picked flavors and combinations (stretch) | _TBD_ |
+| `src/app/` | App shell, navigation, demo mode | A1gUs3 |
+| `src/data/` + `scripts/fetch-flavors.mjs` | Flavor catalog from the public store feed | A1gUs3 |
+| `src/features/box/` | Box session logic and the box screen | A1gUs3 |
+| `src/features/layout/` | Flavor tile grid and case layout editor | A1gUs3 |
+| `src/features/records/` | Saved box records, CSV/JSON export, records screen | A1gUs3 |
+| `src/features/stats/` | Most-picked flavors and combinations (stretch) | A1gUs3 |
 | `src/features/camera/` | Phase 2 camera assist | _TBD_ |
 | `src/domain/` | Shared types. Changes need a PR that explains why | everyone, carefully |
 

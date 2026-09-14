@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addPiece, isComplete, remaining, startSession, toRecord, undoLast } from './boxSession.ts'
+import { addPiece, isComplete, remaining, removeOne, startSession, tally, toRecord, undoLast } from './boxSession.ts'
 
 describe('boxSession', () => {
   it('starts empty', () => {
@@ -65,5 +65,37 @@ describe('boxSession', () => {
     session = addPiece(session, 'raspberry', 'camera', 0.92)
     const record = toRecord(session)
     expect(record.method).toBe('camera-assisted')
+  })
+
+  it('tally reflects live counts in first-seen order, matching the saved record', () => {
+    let session = startSession(6, 1000)
+    session = addPiece(session, 'raspberry')
+    session = addPiece(session, 'amaretto')
+    session = addPiece(session, 'raspberry')
+    expect(tally(session)).toEqual([
+      { flavorId: 'raspberry', count: 2 },
+      { flavorId: 'amaretto', count: 1 },
+    ])
+  })
+
+  it('removeOne removes a single piece of the given flavor, not the last tap overall', () => {
+    let session = startSession(6, 1000)
+    session = addPiece(session, 'amaretto')
+    session = addPiece(session, 'raspberry')
+    session = addPiece(session, 'amaretto')
+
+    session = removeOne(session, 'amaretto')
+    expect(tally(session)).toEqual(
+      expect.arrayContaining([
+        { flavorId: 'amaretto', count: 1 },
+        { flavorId: 'raspberry', count: 1 },
+      ]),
+    )
+    expect(session.undoCount).toBe(1)
+
+    // removing a flavor that isn't in the box is a no-op, not an error
+    const before = session
+    session = removeOne(session, 'turtle')
+    expect(session).toBe(before)
   })
 })

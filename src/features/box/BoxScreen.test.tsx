@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { BoxScreen } from './BoxScreen.tsx'
 import { listRecords } from '../records/records.ts'
-import { loadLayout } from '../layout/caseLayout.ts'
+import { defaultLayout, loadLayout } from '../layout/caseLayout.ts'
 import { FLAVORS } from '../../data/flavors.ts'
 
 beforeEach(() => {
@@ -106,5 +106,66 @@ describe('BoxScreen', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(confirmSpy).not.toHaveBeenCalled()
     expect(screen.getByRole('heading', { name: 'Pick a box size' })).toBeInTheDocument()
+  })
+
+  it('the running tally shows per-flavor counts, and its + button adds without re-tapping the tile', () => {
+    render(<BoxScreen />)
+    fireEvent.click(screen.getByRole('button', { name: '6' }))
+    const [a] = FLAVORS
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(a.name) }))
+
+    expect(screen.getByText(a.name, { selector: '.box-tally-name' })).toBeInTheDocument()
+    expect(screen.getByText('×1')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: `Add one more ${a.name}` }))
+    expect(screen.getByText('×2')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: '2 / 6' })).toBeInTheDocument()
+  })
+
+  it("the tally's − button removes one of that flavor specifically, leaving others alone", () => {
+    render(<BoxScreen />)
+    fireEvent.click(screen.getByRole('button', { name: '6' }))
+    const [a, b] = FLAVORS
+    // grab both tile buttons once, before any tally chips exist to make the name ambiguous
+    const tileA = screen.getByRole('button', { name: new RegExp(a.name) })
+    const tileB = screen.getByRole('button', { name: new RegExp(b.name) })
+    fireEvent.click(tileA)
+    fireEvent.click(tileB)
+    fireEvent.click(tileA)
+    expect(screen.getByRole('heading', { name: '3 / 6' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: `Remove one ${a.name}` }))
+    expect(screen.getByRole('heading', { name: '2 / 6' })).toBeInTheDocument()
+    // a went from x2 to x1, b is untouched at x1 — both tally chips now read "×1"
+    const counts = screen.getAllByText(/×\d/)
+    expect(counts).toHaveLength(2)
+    expect(counts.map((el) => el.textContent)).toEqual(['×1', '×1'])
+  })
+
+  it('dims non-matching tiles when searching, without blocking a tap on them', () => {
+    render(<BoxScreen />)
+    fireEvent.click(screen.getByRole('button', { name: '6' }))
+    const [a, b] = FLAVORS
+
+    fireEvent.change(screen.getByPlaceholderText('Find a flavor…'), { target: { value: a.name } })
+    const nonMatch = screen.getByRole('button', { name: new RegExp(b.name) })
+    expect(nonMatch.className).toContain('flavor-tile--dim')
+
+    fireEvent.click(nonMatch)
+    expect(screen.getByRole('heading', { name: '1 / 6' })).toBeInTheDocument()
+  })
+
+  it('resets a rearranged case layout back to default', () => {
+    render(<BoxScreen />)
+    const [a, b] = FLAVORS
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rearrange case' }))
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(a.name) }))
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(b.name) }))
+    expect(loadLayout().cells[0]).toBe(b.id)
+
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    fireEvent.click(screen.getByRole('button', { name: 'Reset to default' }))
+    expect(loadLayout()).toEqual(defaultLayout())
   })
 })

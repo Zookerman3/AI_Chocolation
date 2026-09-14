@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import type { BoxSession, BoxSize } from '../../domain/types.ts'
 import { BOX_SIZES } from '../../domain/types.ts'
-import { addPiece, isComplete, startSession, toRecord, undoLast } from './boxSession.ts'
+import { addPiece, isComplete, removeOne, startSession, tally, toRecord, undoLast } from './boxSession.ts'
 import { FlavorGrid } from '../layout/FlavorGrid.tsx'
-import { loadLayout, saveLayout, swapCells } from '../layout/caseLayout.ts'
+import { defaultLayout, loadLayout, saveLayout, swapCells } from '../layout/caseLayout.ts'
 import { saveRecord } from '../records/records.ts'
+import { getFlavor } from '../../data/flavors.ts'
 
 interface BoxScreenProps {
   onSaved?: () => void
@@ -17,6 +18,7 @@ export function BoxScreen({ onSaved }: BoxScreenProps) {
   const [now, setNow] = useState(() => Date.now())
   const [rearranging, setRearranging] = useState(false)
   const [swapFrom, setSwapFrom] = useState<number | null>(null)
+  const [query, setQuery] = useState('')
 
   useEffect(() => {
     if (!session || isComplete(session)) return
@@ -27,6 +29,7 @@ export function BoxScreen({ onSaved }: BoxScreenProps) {
   function pickSize(size: BoxSize) {
     setSession(startSession(size))
     setSavedFlash(null)
+    setQuery('')
   }
 
   function tapCell(index: number) {
@@ -48,6 +51,14 @@ export function BoxScreen({ onSaved }: BoxScreenProps) {
 
   function toggleRearrange() {
     setRearranging((on) => !on)
+    setSwapFrom(null)
+  }
+
+  function resetLayout() {
+    if (!window.confirm('Reset the case layout to the default order? Your rearranged positions will be lost.')) return
+    const next = defaultLayout()
+    setLayout(next)
+    saveLayout(next)
     setSwapFrom(null)
   }
 
@@ -75,9 +86,14 @@ export function BoxScreen({ onSaved }: BoxScreenProps) {
           <h2 id="rearrange-heading">
             {swapFrom === null ? 'Tap a tile, then tap where it should go' : 'Now tap the tile to swap with'}
           </h2>
-          <button type="button" onClick={toggleRearrange}>
-            Done
-          </button>
+          <div className="box-toolbar-actions">
+            <button type="button" onClick={resetLayout}>
+              Reset to default
+            </button>
+            <button type="button" onClick={toggleRearrange}>
+              Done
+            </button>
+          </div>
         </div>
         <FlavorGrid layout={layout} onTapCell={tapRearrangeCell} selectedIndex={swapFrom} />
       </section>
@@ -107,6 +123,7 @@ export function BoxScreen({ onSaved }: BoxScreenProps) {
 
   const elapsedSeconds = ((now - session.startedAt) / 1000).toFixed(1)
   const complete = isComplete(session)
+  const currentTally = tally(session)
 
   return (
     <section aria-labelledby="assemble-heading">
@@ -118,7 +135,45 @@ export function BoxScreen({ onSaved }: BoxScreenProps) {
           {elapsedSeconds}s
         </p>
       </div>
-      <FlavorGrid layout={layout} onTapCell={tapCell} disabled={complete} />
+
+      {currentTally.length > 0 && (
+        <ul className="box-tally">
+          {currentTally.map(({ flavorId, count }) => (
+            <li key={flavorId}>
+              <button
+                type="button"
+                className="box-tally-step"
+                aria-label={`Remove one ${getFlavor(flavorId).name}`}
+                onClick={() => setSession(removeOne(session, flavorId))}
+              >
+                −
+              </button>
+              <span className="box-tally-name">{getFlavor(flavorId).name}</span>
+              <span className="box-tally-count">×{count}</span>
+              <button
+                type="button"
+                className="box-tally-step"
+                aria-label={`Add one more ${getFlavor(flavorId).name}`}
+                disabled={complete}
+                onClick={() => setSession(addPiece(session, flavorId))}
+              >
+                +
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <input
+        type="search"
+        className="flavor-search"
+        placeholder="Find a flavor…"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        aria-label="Find a flavor"
+      />
+
+      <FlavorGrid layout={layout} onTapCell={tapCell} disabled={complete} query={query} />
       <div className="box-actions">
         <button type="button" onClick={() => setSession(undoLast(session))} disabled={session.pieces.length === 0}>
           Undo

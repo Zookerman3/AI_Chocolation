@@ -122,6 +122,12 @@ body {
   aspect-ratio: 1;
   object-fit: cover;
   border-radius: 6px;
+  background: #eceaf0; /* shows as a neutral placeholder while the image loads */
+}
+
+.flavor-tile:focus-visible {
+  outline: 2px solid #1d2030;
+  outline-offset: 2px;
 }
 
 .flavor-tile--empty {
@@ -130,6 +136,88 @@ body {
 
 .flavor-tile--selected {
   outline: 2px solid #1d2030;
+}
+
+.flavor-tile--dim {
+  opacity: 0.35;
+}
+
+.flavor-tile-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  justify-content: center;
+}
+
+.badge {
+  font-size: 0.55rem;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: #eceaf0;
+  color: #6b6f80;
+  line-height: 1.4;
+}
+
+.badge-seasonal {
+  background: #f3e2b8;
+  color: #7a5c14;
+}
+
+.flavor-search {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  margin: 12px 0;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1rem;
+}
+
+.box-tally {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.box-tally li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border: 1px solid #ddd;
+  border-radius: 999px;
+  background: white;
+  font-size: 0.8rem;
+}
+
+.box-tally-count {
+  font-variant-numeric: tabular-nums;
+  color: #6b6f80;
+}
+
+.box-tally-step {
+  width: 22px;
+  height: 22px;
+  line-height: 1;
+  border-radius: 50%;
+  border: 1px solid #ccc;
+  background: white;
+  cursor: pointer;
+  padding: 0;
+}
+
+.box-tally-step:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.box-toolbar-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .box-actions,

@@ -2,9 +2,12 @@
 
 Our Build Track entry for the **Chocolathon** (WSU AI Club × Cocoa Dolce × Lovable), Sep 14–19, 2026.
 
-> **What it does:** _TBD once we pick a prompt. One sentence here; the submission form asks for it._
+> **What it does:** A tablet screen for the counter — the cashier taps the chocolate a customer
+> just picked, once per piece, until the count matches the box size, then saves one exportable
+> record per box (CSV/JSON), with the assembly time measured automatically.
 >
-> **Live link:** _TBD (Vercel)_ · **What to click first:** _TBD_
+> **Live link:** _TBD (Vercel)_ · **What to click first:** Turn on "Demo mode," then open the
+> Records and Stats tabs to see sample data without needing real chocolates on hand.
 
 Stack: React 19 + Vite + TypeScript, Vitest, ESLint. There is no CI: `npm run check` on your own
 laptop is the gate before anything merges.
@@ -74,7 +77,20 @@ code, about an hour of work, checkable acceptance criteria. Vague issues fail.
 
 Keep this honest and current. The judges score it.
 
-- The app is an empty shell until the prompt is chosen.
+- **Case layout isn't the real one yet.** We have no way to know Cocoa Dolce's actual physical
+  display case without asking their staff, which the rules don't allow. The tile grid ships with a
+  reasonable default order; a cashier taps "Rearrange case" once to match their counter, and it's
+  saved on that device from then on.
+- **No camera assist yet.** Phase 1 (this) is tap-only. Camera input is gated behind a Wednesday-night
+  accuracy checkpoint (see `CLAUDE.md`) and will only ship if it clears it; otherwise it's out of
+  scope and this stays a tap-only submission.
+- **Local device storage only.** Records live in the browser's localStorage, per device, with no
+  backend, no login, and no sync across tablets. Losing the tab or clearing site data loses the data.
+- **The in-app timer isn't the full "measured, not guessed" story.** It correctly measures real
+  elapsed time per box in the app, but the seconds-per-box number for the submission comes from
+  timing real people assembling real boxes by hand (planned for Thursday), not just this timer.
+- **Not deployed yet.** No live Vercel link. That's a one-time repo-owner action (see "Repo settings"
+  above); until then, this only runs locally (`npm run dev`).
 - The overnight runner detects the Claude usage limit by matching the error text. If Claude changes
   that message, the runner will mark the issue `agent-failed` instead of requeueing it.
 - There is no CI and `main` is unprotected. If someone merges without running `npm run check`, `main` can

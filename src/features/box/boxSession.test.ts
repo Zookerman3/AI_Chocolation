@@ -1,0 +1,69 @@
+import { describe, expect, it } from 'vitest'
+import { addPiece, isComplete, remaining, startSession, toRecord, undoLast } from './boxSession.ts'
+
+describe('boxSession', () => {
+  it('starts empty', () => {
+    const session = startSession(6, 1000)
+    expect(session.size).toBe(6)
+    expect(session.pieces).toHaveLength(0)
+    expect(session.startedAt).toBe(1000)
+    expect(isComplete(session)).toBe(false)
+    expect(remaining(session)).toBe(6)
+  })
+
+  it('adds pieces up to the box size and ignores extras', () => {
+    let session = startSession(6, 1000)
+    for (let i = 0; i < 6; i++) {
+      session = addPiece(session, 'amaretto', 'tap', undefined, 1000 + i)
+    }
+    expect(isComplete(session)).toBe(true)
+
+    const overfilled = addPiece(session, 'raspberry', 'tap', undefined, 2000)
+    expect(overfilled.pieces).toHaveLength(6)
+  })
+
+  it('undo removes the last piece and tracks how many times it was used', () => {
+    let session = startSession(6, 1000)
+    session = addPiece(session, 'amaretto')
+    session = addPiece(session, 'raspberry')
+    session = undoLast(session)
+    expect(session.pieces.map((p) => p.flavorId)).toEqual(['amaretto'])
+    expect(session.undoCount).toBe(1)
+
+    // undo on an empty session is a no-op, not an error
+    let empty = startSession(6, 1000)
+    empty = undoLast(empty)
+    expect(empty.undoCount).toBe(0)
+  })
+
+  it('refuses to save an incomplete box', () => {
+    const session = startSession(6, 1000)
+    expect(() => toRecord(session)).toThrow()
+  })
+
+  it('collapses pieces into per-flavor counts and records timing', () => {
+    let session = startSession(6, 1000)
+    for (let i = 0; i < 4; i++) session = addPiece(session, 'amaretto', 'tap', undefined, 1100 + i)
+    for (let i = 0; i < 2; i++) session = addPiece(session, 'raspberry', 'tap', undefined, 1200 + i)
+
+    const record = toRecord(session, 5000)
+    expect(record.size).toBe(6)
+    expect(record.durationMs).toBe(4000)
+    expect(record.method).toBe('tap')
+    expect(record.demo).toBe(false)
+    expect(record.pieces).toEqual(
+      expect.arrayContaining([
+        { flavorId: 'amaretto', count: 4 },
+        { flavorId: 'raspberry', count: 2 },
+      ]),
+    )
+  })
+
+  it('marks a box camera-assisted if any piece came from the camera', () => {
+    let session = startSession(6, 1000)
+    for (let i = 0; i < 5; i++) session = addPiece(session, 'amaretto', 'tap')
+    session = addPiece(session, 'raspberry', 'camera', 0.92)
+    const record = toRecord(session)
+    expect(record.method).toBe('camera-assisted')
+  })
+})

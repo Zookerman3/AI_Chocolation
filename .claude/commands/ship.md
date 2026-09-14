@@ -1,5 +1,5 @@
 ---
-description: Check, commit, push, open a PR, and auto-merge it when CI passes
+description: Check, commit, push, open a PR, and merge it
 argument-hint: "[optional: what this change is]"
 ---
 
@@ -17,8 +17,7 @@ Ship the current work to `main` through a pull request. Context from the user: $
 6. **Open the PR** with `gh pr create --base main`. Title: what changed. Body, following
    `.github/pull_request_template.md`: summary, how to test it, and **Known limits** (be honest; the
    judges score this). Link the issue with `Closes #N` if there is one.
-7. **Auto-merge.** Run `gh pr merge --auto --squash --delete-branch`. If GitHub refuses auto-merge,
-   wait about 30 seconds, run `gh pr checks --watch`, and once every check passes run
-   `gh pr merge --squash --delete-branch`. If a check fails, show the failure and stop.
-8. **Finish.** Once merged, `git switch main` and `git pull --ff-only`. Reply with the PR link and
-   whether it merged or is waiting on CI.
+7. **Merge.** There is no CI. The `npm run check` you ran in step 2 (and again after any rebase) is the
+   only gate, so never merge without a passing check. Run `gh pr merge --squash --delete-branch`.
+   If GitHub says the PR conflicts with `main`, go back to step 4.
+8. **Finish.** `git switch main` and `git pull --ff-only`. Reply with the PR link and confirm it merged.

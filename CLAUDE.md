@@ -14,19 +14,20 @@ one-paragraph summary of what we're building and who at Cocoa Dolce would use it
 | Command | What it does |
 |---|---|
 | `npm run dev` | Local dev server |
-| `npm run check` | Lint, typecheck, tests, build. **Must pass before any PR.** CI runs the same thing. |
+| `npm run check` | Lint, typecheck, tests, build. **Must pass before any merge.** There is no CI, so this is the only gate. |
 | `npm run test:watch` | Tests in watch mode |
 | `npm run overnight` | Overnight runner (see README) |
 | `npm run labels` | One-time: creates the agent labels on GitHub |
 
 Slash commands in `.claude/commands/`:
-- `/ship`: check, commit, push, open a PR, auto-merge when CI is green
+- `/ship`: check, commit, push, open a PR, merge it
 - `/sync`: pull the latest `main` into your branch and re-run check
 - `/task <idea>`: turn an idea into a well-scoped GitHub issue for an overnight agent
 
 ## Team workflow
 
-- **Never commit directly to `main`.** Every change goes through a PR that auto-merges when CI passes.
+- **Never commit directly to `main`.** Every change goes through a PR, merged only after `npm run check`
+  passes locally. Nothing on GitHub enforces this, so it's on each of us.
 - Branch names: `<github-username>/<short-slug>` for people, `agent/<github-username>/<issue#>` for the overnight runner.
 - One PR = one issue or one idea. Small PRs merge fast and rarely conflict.
 - Pull often (`/sync`). Five people plus agents move `main` quickly.
@@ -54,7 +55,7 @@ then only change files in your own area unless the issue says otherwise.
 | `src/features/<feature-a>/` | _TBD_ |
 | `src/features/<feature-b>/` | _TBD_ |
 | `src/data/` (Cocoa Dolce data, types) | _TBD_ |
-| Tooling, CI, `scripts/` | _TBD_ |
+| Tooling, `scripts/` | _TBD_ |
 
 Shared files (`package.json`, `src/App.tsx`, `CLAUDE.md`) are edited by humans, or by
 agents only when the issue explicitly names them.

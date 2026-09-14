@@ -6,8 +6,8 @@ Our Build Track entry for the **Chocolathon** (WSU AI Club × Cocoa Dolce × Lov
 >
 > **Live link:** _TBD (Vercel)_ · **What to click first:** _TBD_
 
-Stack: React 19 + Vite + TypeScript, Vitest, ESLint. CI runs on every pull request, and
-passing PRs merge themselves.
+Stack: React 19 + Vite + TypeScript, Vitest, ESLint. There is no CI: `npm run check` on your own
+laptop is the gate before anything merges.
 
 ---
 
@@ -31,7 +31,7 @@ your Node is too old: `node -v` must be 20.19 or newer.
 | When | Do this |
 |---|---|
 | Starting work | `/sync` in Claude Code (or `git pull` on main) |
-| Change is ready | `/ship`: check → commit → push → PR → auto-merge |
+| Change is ready | `/ship`: check → commit → push → PR → merge |
 | Have an idea for an agent | `/task <idea> for @username` creates a scoped issue |
 | Bedtime | `npm run overnight`, laptop plugged in, lid open |
 | Morning (15 min) | `gh pr list` and `gh issue list --label agent-failed` |
@@ -48,7 +48,7 @@ Rules for humans and agents live in [CLAUDE.md](CLAUDE.md). Read the "Team workf
    next to this repo, so your own files are untouched
 2. runs Claude Code headless on the issue (`claude -p`, edits auto-accepted, no pushing allowed)
 3. rebases on `main`, runs `npm run check`, pushes the branch, and opens a PR
-4. **check passed:** the PR is set to auto-merge, and the issue is labeled `agent-pr-open`
+4. **check passed:** the PR is merged right away and the issue closes. If the merge fails, it's labeled `agent-pr-open`
 5. **check failed or conflict:** a draft PR plus the `agent-failed` label and a comment for a human
 
 It stops when your queue is empty or your Claude usage limit is hit. Then the unfinished issue
@@ -66,11 +66,8 @@ code, about an hour of work, checkable acceptance criteria. Vague issues fail.
 ## Repo settings (owner, one time)
 
 - Settings → Collaborators: add teammates (write access)
-- Settings → General → Pull Requests: allow squash merging, allow auto-merge,
-  automatically delete head branches
-- Settings → Branches: protect `main`: require a pull request and the `check` status check,
-  block force pushes. This needs GitHub Pro (free with the Student Developer Pack) on a private repo.
-  Without it, auto-merge won't turn on, and passing PRs wait for someone to click Merge.
+- Settings → General → Pull Requests: allow squash merging, automatically delete head branches
+- `main` is not protected. That needs GitHub Pro on a private repo. Nothing stops a direct push, so follow CLAUDE.md.
 - Vercel: import the repo. Every PR gets a preview link, and `main` is the live link.
 
 ## Known limits
@@ -80,5 +77,7 @@ Keep this honest and current. The judges score it.
 - The app is an empty shell until the prompt is chosen.
 - The overnight runner detects the Claude usage limit by matching the error text. If Claude changes
   that message, the runner will mark the issue `agent-failed` instead of requeueing it.
+- There is no CI and `main` is unprotected. If someone merges without running `npm run check`, `main` can
+  break. Run `/sync` and check before starting work.
 - Two agents editing the same files will conflict. Area ownership in `CLAUDE.md` is what prevents
   that, not the tooling.

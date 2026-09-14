@@ -6,7 +6,8 @@
 # is never touched. For each issue:
 #   1. Claude Code works on it headless and commits
 #   2. this script re-runs `npm run check`, rebases on main, pushes, and opens a PR
-#   3. passing PRs are set to auto-merge; failing ones become draft PRs labeled `agent-failed`
+#   3. passing PRs are merged right away (there is no CI; the local check is the gate);
+#      failing ones become draft PRs labeled `agent-failed`
 # Stops when the queue is empty, MAX_TASKS is reached, or your Claude usage limit is hit
 # (the unfinished issue goes back to `agent-ready`).
 #
@@ -206,11 +207,14 @@ LIMITS: <what does not work yet, or was left out>"
   CURRENT_ISSUE=""; CURRENT_WT=""
 
   if [[ -n "$passed" ]]; then
-    if ! gh pr merge "$branch" --auto --squash --delete-branch >>"$log_file" 2>&1; then
-      log "  auto-merge unavailable; the PR will wait for a human to merge"
+    # No CI: the local `npm run check` above is the gate, so merge right away.
+    if gh pr merge "$branch" --squash --delete-branch >>"$log_file" 2>&1; then
+      gh issue edit "$n" --remove-label agent-running >/dev/null 2>&1 || true
+      log "  merged: $pr_url"
+    else
+      set_label "$n" agent-running agent-pr-open
+      log "  check passed but merge failed (likely a conflict); PR waiting: $pr_url"
     fi
-    set_label "$n" agent-running agent-pr-open
-    log "  PR ready: $pr_url"
     return 0
   fi
 

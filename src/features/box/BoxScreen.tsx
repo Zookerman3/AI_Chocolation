@@ -51,6 +51,14 @@ export function BoxScreen({ onSaved }: BoxScreenProps) {
     setSwapFrom(null)
   }
 
+  function cancel() {
+    if (session && session.pieces.length > 0) {
+      const ok = window.confirm(`Discard this ${session.size}-piece box? ${session.pieces.length} piece(s) already tapped will be lost.`)
+      if (!ok) return
+    }
+    setSession(null)
+  }
+
   function save() {
     if (!session || !isComplete(session)) return
     const record = toRecord(session, now)
@@ -115,7 +123,7 @@ export function BoxScreen({ onSaved }: BoxScreenProps) {
         <button type="button" onClick={() => setSession(undoLast(session))} disabled={session.pieces.length === 0}>
           Undo
         </button>
-        <button type="button" onClick={() => setSession(null)}>
+        <button type="button" onClick={cancel}>
           Cancel
         </button>
         <button type="button" onClick={save} disabled={!complete}>

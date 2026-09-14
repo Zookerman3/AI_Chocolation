@@ -91,6 +91,25 @@ Keep this honest and current. The judges score it.
   timing real people assembling real boxes by hand (planned for Thursday), not just this timer.
 - **Not deployed yet.** No live Vercel link. That's a one-time repo-owner action (see "Repo settings"
   above); until then, this only runs locally (`npm run dev`).
+
+### Where this breaks, named against the four scenarios the prompt calls out
+
+- **A rush at the counter.** One tap per piece, no confirm dialogs, so it doesn't slow anyone down —
+  but that also means there's no friction to catch a mistake in the moment. The only backstop is that
+  Save stays disabled until the count exactly matches the box size, and the count is large and always
+  visible, so an under- or over-tapped box is obvious before the cashier walks away from it.
+- **A mis-tap.** Undo only removes the single most recent tap. Catching a mistake made several taps
+  ago means undoing everything back to it and re-tapping the rest — real friction on a big box. There's
+  no "tap to remove this specific piece" yet.
+- **Look-alike pieces.** This is a tap-UI limit, not just a camera one: several flavors are genuinely
+  hard to tell apart even from the reference photo on each tile, e.g. the brown-with-copper-splatter
+  group (Manhattan, Espresso Martini, S'Mores, Peanut Butter Caramel, Amaretto, Champagne, Crème
+  Brûlée, Turtle) all look similar at tile size. If a cashier misidentifies one by eye, they'll
+  correctly tap the tile for what they *think* it is, and the app has no way to catch that — it only
+  catches a mismatched *count*, not a mismatched *flavor*.
+- **A large box.** Works up to 50 pieces (tested), but there's no batch-add shortcut — 50 taps takes
+  proportionally longer than 6, and each one is a chance to mis-tap. Not broken, just slower, which is
+  exactly why the 50-piece box needs its own real timing pass on Thursday, not just the 6-piece one.
 - The overnight runner detects the Claude usage limit by matching the error text. If Claude changes
   that message, the runner will mark the issue `agent-failed` instead of requeueing it.
 - There is no CI and `main` is unprotected. If someone merges without running `npm run check`, `main` can

@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { BoxScreen } from './BoxScreen.tsx'
 import { listRecords } from '../records/records.ts'
 import { loadLayout } from '../layout/caseLayout.ts'
@@ -7,6 +7,10 @@ import { FLAVORS } from '../../data/flavors.ts'
 
 beforeEach(() => {
   localStorage.clear()
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
 })
 
 describe('BoxScreen', () => {
@@ -65,5 +69,42 @@ describe('BoxScreen', () => {
     expect(before.cells[1]).toBe(b.id)
     expect(after.cells[0]).toBe(b.id)
     expect(after.cells[1]).toBe(a.id)
+  })
+
+  it('handles the largest box size (50 pieces, tapped one at a time)', () => {
+    render(<BoxScreen />)
+    fireEvent.click(screen.getByRole('button', { name: '50' }))
+
+    const tile = screen.getByRole('button', { name: new RegExp(FLAVORS[0].name) })
+    for (let i = 0; i < 50; i++) fireEvent.click(tile)
+    expect(screen.getByRole('heading', { name: '50 / 50' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save box' }))
+    expect(listRecords()[0].pieces).toEqual([{ flavorId: FLAVORS[0].id, count: 50 }])
+  })
+
+  it('asks for confirmation before discarding a box with pieces already tapped', () => {
+    render(<BoxScreen />)
+    fireEvent.click(screen.getByRole('button', { name: '6' }))
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(FLAVORS[0].name) }))
+
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(confirmSpy).toHaveBeenCalledOnce()
+    // declined the confirm, so the box is still in progress
+    expect(screen.getByRole('heading', { name: '1 / 6' })).toBeInTheDocument()
+
+    confirmSpy.mockReturnValue(true)
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.getByRole('heading', { name: 'Pick a box size' })).toBeInTheDocument()
+  })
+
+  it('cancels an empty box without asking for confirmation', () => {
+    render(<BoxScreen />)
+    fireEvent.click(screen.getByRole('button', { name: '6' }))
+    const confirmSpy = vi.spyOn(window, 'confirm')
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(confirmSpy).not.toHaveBeenCalled()
+    expect(screen.getByRole('heading', { name: 'Pick a box size' })).toBeInTheDocument()
   })
 })

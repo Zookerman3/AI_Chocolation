@@ -2,9 +2,17 @@ import { useState } from 'react'
 import { listRecords } from '../records/records.ts'
 import { topCombos, topFlavors } from './stats.ts'
 import { getFlavor } from '../../data/flavors.ts'
+import type { BoxRecord } from '../../domain/types.ts'
 
-export function StatsScreen() {
-  const [records, setRecords] = useState(() => listRecords())
+interface StatsScreenProps {
+  /** When set, shows stats for this instead of real storage (demo mode). */
+  demoRecords?: BoxRecord[]
+}
+
+export function StatsScreen({ demoRecords }: StatsScreenProps) {
+  const isDemo = demoRecords !== undefined
+  const [stored, setStored] = useState(() => listRecords())
+  const records = isDemo ? demoRecords : stored
   const flavors = topFlavors(records)
   const combos = topCombos(records)
   const maxFlavorCount = flavors[0]?.count ?? 1
@@ -12,8 +20,10 @@ export function StatsScreen() {
   return (
     <section aria-labelledby="stats-heading">
       <div className="stats-header">
-        <h2 id="stats-heading">Across {records.length} saved boxes</h2>
-        <button type="button" onClick={() => setRecords(listRecords())}>
+        <h2 id="stats-heading">
+          Across {records.length} saved boxes{isDemo ? ' · demo' : ''}
+        </h2>
+        <button type="button" onClick={() => setStored(listRecords())} disabled={isDemo}>
           Refresh
         </button>
       </div>

@@ -1,9 +1,12 @@
 // Records are stored on the device (localStorage). There is no backend for Phase 1.
+//
+// Demo mode (see src/app/demoData.ts) never touches this storage: it's generated fresh
+// and passed down as a display-only override in App.tsx, so a real box saved while
+// demo mode happens to be on can never be lost or overwritten.
 
 import type { BoxRecord } from '../../domain/types.ts'
 
 const STORAGE_KEY = 'ai-chocolation:records'
-const DEMO_STASH_KEY = 'ai-chocolation:records-before-demo'
 
 export function listRecords(): BoxRecord[] {
   try {
@@ -14,27 +17,10 @@ export function listRecords(): BoxRecord[] {
   }
 }
 
-export function replaceRecords(records: BoxRecord[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(records))
-}
-
 export function saveRecord(record: BoxRecord): void {
-  replaceRecords([record, ...listRecords()])
+  localStorage.setItem(STORAGE_KEY, JSON.stringify([record, ...listRecords()]))
 }
 
 export function clearRecords(): void {
   localStorage.removeItem(STORAGE_KEY)
-}
-
-/** Swaps in sample data for judges, stashing any real saved boxes so they come back
- * untouched when demo mode is turned off. */
-export function enterDemoMode(demoRecords: BoxRecord[]): void {
-  localStorage.setItem(DEMO_STASH_KEY, JSON.stringify(listRecords().filter((r) => !r.demo)))
-  replaceRecords(demoRecords)
-}
-
-export function exitDemoMode(): void {
-  const raw = localStorage.getItem(DEMO_STASH_KEY)
-  replaceRecords(raw ? (JSON.parse(raw) as BoxRecord[]) : [])
-  localStorage.removeItem(DEMO_STASH_KEY)
 }

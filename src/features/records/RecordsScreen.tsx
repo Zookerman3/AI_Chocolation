@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { clearRecords, listRecords } from './records.ts'
 import { toCSV, toJSON } from './csv.ts'
 import { getFlavor } from '../../data/flavors.ts'
+import type { BoxRecord } from '../../domain/types.ts'
 
 function download(filename: string, content: string, mime: string) {
   const blob = new Blob([content], { type: mime })
@@ -14,14 +15,19 @@ function download(filename: string, content: string, mime: string) {
 }
 
 interface RecordsScreenProps {
+  /** When set, shows this instead of real storage (demo mode) and disables
+   * refresh/clear, since there's nothing in storage to act on. */
+  demoRecords?: BoxRecord[]
   onChange?: () => void
 }
 
-export function RecordsScreen({ onChange }: RecordsScreenProps) {
-  const [records, setRecords] = useState(() => listRecords())
+export function RecordsScreen({ demoRecords, onChange }: RecordsScreenProps) {
+  const isDemo = demoRecords !== undefined
+  const [stored, setStored] = useState(() => listRecords())
+  const records = isDemo ? demoRecords : stored
 
   function refresh() {
-    setRecords(listRecords())
+    setStored(listRecords())
   }
 
   function handleClear() {
@@ -33,9 +39,11 @@ export function RecordsScreen({ onChange }: RecordsScreenProps) {
 
   return (
     <section aria-labelledby="records-heading">
-      <h2 id="records-heading">Saved boxes ({records.length})</h2>
+      <h2 id="records-heading">
+        Saved boxes ({records.length}){isDemo ? ' · demo' : ''}
+      </h2>
       <div className="records-actions">
-        <button type="button" onClick={refresh}>
+        <button type="button" onClick={refresh} disabled={isDemo}>
           Refresh
         </button>
         <button type="button" onClick={() => download('box-records.csv', toCSV(records), 'text/csv')} disabled={records.length === 0}>
@@ -48,7 +56,7 @@ export function RecordsScreen({ onChange }: RecordsScreenProps) {
         >
           Export JSON
         </button>
-        <button type="button" onClick={handleClear} disabled={records.length === 0}>
+        <button type="button" onClick={handleClear} disabled={isDemo || stored.length === 0}>
           Clear all
         </button>
       </div>

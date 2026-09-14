@@ -1,0 +1,5 @@
+# Normalize line endings so Windows and Mac teammates don't fight over diffs.
+* text=auto eol=lf
+
+# Shell scripts must stay LF or bash on Mac and Git Bash will fail to run them.
+*.sh text eol=lf

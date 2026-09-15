@@ -6,6 +6,7 @@ import { FlavorGrid } from '../layout/FlavorGrid.tsx'
 import { defaultLayout, loadLayout, saveLayout, swapCells } from '../layout/caseLayout.ts'
 import { saveRecord } from '../records/records.ts'
 import { getFlavor } from '../../data/flavors.ts'
+import { CameraScreen } from '../camera/CameraScreen.tsx'
 
 interface BoxScreenProps {
   onSaved?: () => void
@@ -19,6 +20,7 @@ export function BoxScreen({ onSaved }: BoxScreenProps) {
   const [rearranging, setRearranging] = useState(false)
   const [swapFrom, setSwapFrom] = useState<number | null>(null)
   const [query, setQuery] = useState('')
+  const [showCamera, setShowCamera] = useState(false)
 
   useEffect(() => {
     if (!session || isComplete(session)) return
@@ -30,6 +32,7 @@ export function BoxScreen({ onSaved }: BoxScreenProps) {
     setSession(startSession(size))
     setSavedFlash(null)
     setQuery('')
+    setShowCamera(false)
   }
 
   function tapCell(index: number) {
@@ -121,6 +124,10 @@ export function BoxScreen({ onSaved }: BoxScreenProps) {
     )
   }
 
+  if (showCamera) {
+    return <CameraScreen session={session} onSessionChange={setSession} onClose={() => setShowCamera(false)} />
+  }
+
   const elapsedSeconds = ((now - session.startedAt) / 1000).toFixed(1)
   const complete = isComplete(session)
   const currentTally = tally(session)
@@ -175,6 +182,9 @@ export function BoxScreen({ onSaved }: BoxScreenProps) {
 
       <FlavorGrid layout={layout} onTapCell={tapCell} disabled={complete} query={query} />
       <div className="box-actions">
+        <button type="button" onClick={() => setShowCamera(true)} disabled={complete}>
+          Use camera
+        </button>
         <button type="button" onClick={() => setSession(undoLast(session))} disabled={session.pieces.length === 0}>
           Undo
         </button>

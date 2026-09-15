@@ -82,9 +82,15 @@ Keep this honest and current. The judges score it.
   reasonable default order; a cashier taps "Rearrange case" once to match their counter, and it's
   saved on that device from then on. A "Reset to default" button is there in case a rearrange goes
   wrong.
-- **No camera assist yet.** Phase 1 (this) is tap-only. Camera input is gated behind a Wednesday-night
-  accuracy checkpoint (see `CLAUDE.md`) and will only ship if it clears it; otherwise it's out of
-  scope and this stays a tap-only submission.
+- **Camera assist is built but not trained.** The full capture → detect → auto-add/confirm flow
+  (`src/features/camera/`) is implemented and tested end to end, following the same whole-box
+  object-detection approach as
+  [Roboflow's own chocolate-identification project](https://blog.roboflow.com/identifying-chocolates-with-computer-vision/).
+  It's currently running a stub detector that finds nothing, because no one has taken real photos of
+  our bonbons yet — that's the one part of this no amount of code can substitute for. Set
+  `VITE_ROBOFLOW_API_KEY` / `VITE_ROBOFLOW_MODEL_ID` (`.env.example`) once a model exists; nothing else
+  needs to change. Still gated behind the Wednesday-night accuracy checkpoint in `CLAUDE.md` — if that
+  isn't cleared, this stays a tap-only submission and that's fine, tap-only already works end to end.
 - **Local device storage only.** Records live in the browser's localStorage, per device, with no
   backend, no login, and no sync across tablets. Losing the tab or clearing site data loses the data.
 - **The in-app timer isn't the full "measured, not guessed" story.** It correctly measures real

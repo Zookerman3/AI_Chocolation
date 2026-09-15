@@ -77,6 +77,14 @@ code, about an hour of work, checkable acceptance criteria. Vague issues fail.
 
 Keep this honest and current. The judges score it.
 
+- **Narrow/portrait tablet: progress and Save are below the fold on a fresh box.**
+  The redesigned layout (Manus AI) collapses to one column under 900px and its
+  `box-actions` bar is sticky-to-bottom once reached, but the "Your Box" panel
+  still renders after the full flavor grid in DOM order — on a brand-new box, the
+  cashier has to scroll past the whole grid once before seeing the running count
+  or the Save button at all. Fine at desktop/landscape width; worth fixing before
+  this runs on a real portrait tablet at the counter.
+
 - **Case layout isn't the real one yet.** We have no way to know Cocoa Dolce's actual physical
   display case without asking their staff, which the rules don't allow. The tile grid ships with a
   reasonable default order; a cashier taps "Rearrange case" once to match their counter, and it's

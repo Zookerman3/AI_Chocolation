@@ -38,13 +38,24 @@ undo → save only when the count matches → one record per box → CSV/JSON ex
 Plus a demo mode with sample boxes (judges open the link without chocolates) and a stats view.
 
 **Phase 2 (Wed–Fri): camera assist, only if it passes the checkpoint.**
-A phone or tablet above the open box, lined up with an on-screen outline. Crop the photo into the
-box insert's grid cells, match each cell against our own labeled top-down photos, and prefill the
-box. The cashier confirms or fixes low-confidence cells with one tap.
+Switched from the original per-cell-crop plan to whole-box object detection, matching
+[Roboflow's own chocolate-identification writeup](https://blog.roboflow.com/identifying-chocolates-with-computer-vision/):
+one photo of the open box, a model draws a bounding box and a class around each visible piece. A
+detection at or above ~80% confidence auto-adds to the box; anything under that, or a class that
+doesn't map to a known flavor, goes to the cashier for a one-tap confirm or correction. The
+integration (`src/features/camera/`) is fully built and tested against a stub detector — `applyDetections`
+does the auto-add/review/overflow split, `CameraScreen` does the capture-and-confirm UI, and
+`roboflowDetector.ts` is a ready client for a Roboflow-hosted model. **What's still missing is the
+model itself**: like the Roboflow article, it needs real photos of our actual bonbons, labeled with
+classes named exactly as our flavor ids (see `roboflowDetector.ts`'s doc comment) via Roboflow's
+Label Assist + Dataset Health Check, the same as the reference project. Until that exists, set
+`VITE_ROBOFLOW_API_KEY` / `VITE_ROBOFLOW_MODEL_ID` (see `.env.example`) and the app runs the stub
+detector instead — the flow works, it just won't detect anything real.
 
 **Checkpoint: Wednesday night.** On held-out photos, if the camera's top-1 accuracy is at least ~80%
-and top-3 is at least ~95%, build camera assist. Otherwise it goes in the video and Known limits as
-tested and measured, and we ship tap-only.
+and top-3 is at least ~95%, ship camera assist. Otherwise it goes in the video and Known limits as
+tested and measured, and we ship tap-only. That checkpoint needs real training photos taken by
+someone on the team — nobody has taken any yet.
 
 **Thursday:** time 10+ real boxes per method (seconds per box, corrections). Those numbers go in the video.
 
@@ -114,7 +125,7 @@ then only change files in your own area unless the issue says otherwise.
 | `src/features/layout/` | Flavor tile grid and case layout editor | A1gUs3 |
 | `src/features/records/` | Saved box records, CSV/JSON export, records screen | A1gUs3 |
 | `src/features/stats/` | Most-picked flavors and combinations (stretch) | A1gUs3 |
-| `src/features/camera/` | Phase 2 camera assist | _TBD_ |
+| `src/features/camera/` | Phase 2 camera assist | A1gUs3 |
 | `src/domain/` | Shared types. Changes need a PR that explains why | everyone, carefully |
 
 Shared files (`package.json`, `src/App.tsx`, `CLAUDE.md`, `src/domain/types.ts`) are edited by

@@ -15,11 +15,11 @@ what-to-click-first note.
 | Camera assist (on-device nearest-neighbour matcher) | **Merged to `main`** (squash of `Zookerman3/camera-assist`) |
 | Orange + Strawberry flavors | Merged (`src/data/flavors.local.json`) |
 | Training dataset (1,920 labelled crops) | Built and verified; lives on Stephen's Mac, **not in the repo** |
-| Crash-proofing patch (error boundary, seconds-per-box stat) | **Not applied** — `~/Downloads/crash-proofing.patch` on Stephen's Mac |
-| MobileNetV2 upgrade (fixes lighting/camera robustness) | Measured, **not ported**; waiting on a go/no-go |
+| Crash-proofing patch (error boundary, seconds-per-box stat) | Applied and merged Wed afternoon (`Zookerman3/crash-proofing`) |
+| MobileNetV2 upgrade (fixes lighting/camera robustness) | **Ported** on `Zookerman3/mobilenet` (Wed afternoon): int8 model at 160 px, fused gallery, blur guard, colour fallback; see README Known limits for the measured table |
 | Vercel deploy + iPad test over HTTPS | Not done |
 | Thursday timing (10+ real boxes per method) | Not done |
-| README robustness table (section 5 below) | Not written into README yet |
+| README robustness table | In README Known limits, re-measured through the shipped code |
 
 Local branches on Stephen's Mac at hand-off: `main` (HEAD), `Zookerman3/camera-assist`,
 `Zookerman3/dataset`, `pr-13`, `pr13-fix`. The repo root also holds an **untracked** `dataset/`
@@ -148,7 +148,7 @@ Finding: matched conditions pass, everything else doesn't. Brightness ×0.6 → 
 4 wrong auto-fills**. Colour-normalisation rescues were tried and dropped: black-tray reference
 made the product photo 0/16 (tray clips to black), gray-world over the pieces got 9/16.
 
-## 5. The MobileNetV2 experiment (measured, not shipped)
+## 5. The MobileNetV2 upgrade (measured, then shipped on `Zookerman3/mobilenet`)
 
 Swapping the hand-made fingerprint for a pretrained CNN embedding fixes the robustness problem.
 Recipe, verified against the saved features:
@@ -176,7 +176,7 @@ Recipe, verified against the saved features:
 The only regression is heavy blur. On the product photo the fused model asks the cashier instead of
 guessing wrong, which is the behaviour the prompt's "honest about limits" line rewards.
 
-### Scoped plan for porting it (est. 3–4 h) — not started
+### How it was ported (the plan below was followed; differences noted)
 
 1. `npm i onnxruntime-web` (say why in the PR: on-device inference, no server). **WASM backend
    only** — WebGPU crashes on iOS Safari. Serve the `.wasm` from the app (`?url` import from
@@ -197,7 +197,14 @@ guessing wrong, which is the behaviour the prompt's "honest about limits" line r
    v1 gallery** — keep shipping it.
 6. Re-run the sweep against the built bundle and put the table above in README Known limits.
 
-If the decision is "freeze", still put the robustness table in README: the judges score honesty.
+What actually shipped: the feature-only subgraph (`input` → `'464'`) converted to opset 13 and
+quantised static int8 QDQ with MinMax calibration on 168 crops (`onnxruntime.quantization`), 2.5 MB;
+input **160 px** (98.2% held-out alone vs 97.8 at 224, twice as fast); `onnxruntime-web/wasm` entry
+with the `.wasm` imported via `?url` and `ort.env.wasm.wasmPaths = { wasm }`, one thread; the
+recognizer chunk is lazy-loaded; galleries are `gallery-fused` (3.1 MB) and `gallery-color` (735 KB);
+`localDetector.ts` refuses frames whose sharpest cell scores under 15 (mean squared Laplacian on the
+96 px crop); PWA precache raised to 20 MB. Fused held-out: 99.2 / 99.9. Browser end-to-end on three
+held-out photos: 27/27 each, ~2.5 s. Perturbation sweep re-run through the shipped code: see README.
 
 ## 6. Not yet applied: `crash-proofing.patch`
 

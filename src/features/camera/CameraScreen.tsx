@@ -2,11 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { BoxSession } from '../../domain/types.ts'
 import type { Detection } from './types.ts'
 import { applyDetections, confirmDetection } from './applyDetections.ts'
-import { detectorKind, getDetector } from './config.ts'
+import { detectorKind, getDetector, preloadRecognizer } from './config.ts'
+import type { LoadProgress } from './recognizer.ts'
 import { FLAVORS, flavorOrPlaceholder } from '../../data/flavors.ts'
 import { cells, gridFor, outlineRect } from './grid.ts'
 import type { GridSpec, Rect } from './grid.ts'
-import { loadGallery } from './gallery.ts'
 
 interface CameraScreenProps {
   session: BoxSession
@@ -69,15 +69,24 @@ export function CameraScreen({ session, onSessionChange, onClose }: CameraScreen
   const [overflowed, setOverflowed] = useState<Detection[]>([])
   const [addedCount, setAddedCount] = useState(0)
   const [galleryReady, setGalleryReady] = useState(detectorKind !== 'local')
+  const [progress, setProgress] = useState<LoadProgress | null>(null)
+  const [degraded, setDegraded] = useState<string | null>(null)
   const { videoRef, state: preview, frame } = useCameraPreview(grid !== null)
 
-  // Warm the gallery while the cashier is still lining the box up, so the first
-  // capture doesn't pay for the fetch. ~0.7 MB, precached after the first visit.
+  // Warm the recognizer while the cashier is still lining the box up, so the
+  // first capture doesn't pay for the download. ~6 MB the first time, precached
+  // by the service worker after that.
   useEffect(() => {
     if (detectorKind !== 'local') return
     let live = true
-    loadGallery()
-      .then(() => live && setGalleryReady(true))
+    preloadRecognizer((p) => {
+      if (live) setProgress(p)
+    })
+      .then((r) => {
+        if (!live) return
+        setGalleryReady(true)
+        if (r.kind === 'color') setDegraded(r.reason)
+      })
       .catch((err: unknown) => {
         if (!live) return
         setError(err instanceof Error ? err.message : 'Could not load the flavor gallery.')
@@ -182,7 +191,7 @@ export function CameraScreen({ session, onSessionChange, onClose }: CameraScreen
             {frame && <GridOutline grid={grid} outline={outlineRect(grid, frame.width, frame.height)} />}
             {preview === 'starting' && <div className="camera-veil">Starting the camera…</div>}
             {preview === 'live' && !galleryReady && status !== 'error' && (
-              <div className="camera-veil">Getting the flavor gallery ready — first time only</div>
+              <div className="camera-veil">{loadingText(progress)}</div>
             )}
           </div>
           <div className="camera-actions">
@@ -234,6 +243,12 @@ export function CameraScreen({ session, onSessionChange, onClose }: CameraScreen
         </div>
       )}
 
+      {degraded && (
+        <p className="camera-banner">
+          <strong>Basic colour matching.</strong> The recognizer model didn't load on this device, so expect more
+          "please confirm" taps than usual. Reload once the connection is back.
+        </p>
+      )}
       {detectorKind === 'stub' && (
         <p className="camera-banner">
           <strong>Demo camera flow.</strong> No model is configured yet, but the review flow is ready for when one is
@@ -273,6 +288,16 @@ export function CameraScreen({ session, onSessionChange, onClose }: CameraScreen
       )}
     </section>
   )
+}
+
+/** What the veil says while the recognizer downloads: a number when the server
+ * told us the size, a phase otherwise. */
+export function loadingText(p: LoadProgress | null): string {
+  if (!p || p.phase === 'ready') return 'Getting the recognizer ready — first time only'
+  if (p.phase === 'gallery') return 'Loading the flavor gallery — first time only'
+  const mb = (n: number) => (n / 1e6).toFixed(1)
+  if (p.total) return `Loading the recognizer — ${mb(p.loaded)} of ${mb(p.total)} MB, first time only`
+  return `Loading the recognizer — ${mb(p.loaded)} MB so far, first time only`
 }
 
 function GridOutline({ grid, outline }: { grid: GridSpec; outline: Rect }) {

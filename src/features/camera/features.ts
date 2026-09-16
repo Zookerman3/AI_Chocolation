@@ -26,13 +26,20 @@ const DISK_R2 = 36 * 36 // the bonbon sits inside this disk; the corners are cel
 /** Area-average resize of RGBA pixels to CROP x CROP. Same as OpenCV INTER_AREA
  * for downscaling, which is what the gallery crops went through. */
 export function resizeToCrop(src: Uint8ClampedArray | Uint8Array, sw: number, sh: number): Uint8ClampedArray {
-  const out = new Uint8ClampedArray(CROP * CROP * 4)
-  for (let y = 0; y < CROP; y++) {
-    const y0 = Math.floor((y * sh) / CROP)
-    const y1 = Math.max(y0 + 1, Math.floor(((y + 1) * sh) / CROP))
-    for (let x = 0; x < CROP; x++) {
-      const x0 = Math.floor((x * sw) / CROP)
-      const x1 = Math.max(x0 + 1, Math.floor(((x + 1) * sw) / CROP))
+  return resizeRgba(src, sw, sh, CROP)
+}
+
+/** Area-average resize of RGBA pixels to a square of `size`. The embedding in
+ * embed.ts wants a bigger square than the colour fingerprint does; both come
+ * from this one function so Node and the browser resize identically. */
+export function resizeRgba(src: Uint8ClampedArray | Uint8Array, sw: number, sh: number, size: number): Uint8ClampedArray {
+  const out = new Uint8ClampedArray(size * size * 4)
+  for (let y = 0; y < size; y++) {
+    const y0 = Math.floor((y * sh) / size)
+    const y1 = Math.max(y0 + 1, Math.floor(((y + 1) * sh) / size))
+    for (let x = 0; x < size; x++) {
+      const x0 = Math.floor((x * sw) / size)
+      const x1 = Math.max(x0 + 1, Math.floor(((x + 1) * sw) / size))
       let r = 0
       let g = 0
       let b = 0
@@ -47,7 +54,7 @@ export function resizeToCrop(src: Uint8ClampedArray | Uint8Array, sw: number, sh
           n++
         }
       }
-      const o = (y * CROP + x) * 4
+      const o = (y * size + x) * 4
       out[o] = r / n
       out[o + 1] = g / n
       out[o + 2] = b / n
@@ -188,4 +195,25 @@ export function featureFromCrop(rgba: Uint8ClampedArray): Float32Array {
   norm = Math.sqrt(norm) + 1e-9
   for (let i = 0; i < out.length; i++) out[i] /= norm
   return out
+}
+
+/** How sharp a CROP x CROP crop is: mean squared 3x3 Laplacian of its grey
+ * level. Blur is the one thing the recognizer gets confidently wrong on (it
+ * can't tell a smeared brown dome from another smeared brown dome), so the
+ * detector refuses a frame whose crops are all soft instead of guessing.
+ * Scale-free because every crop is resized to CROP first. */
+export function sharpness(rgba: Uint8ClampedArray): number {
+  const gray = new Float32Array(CROP * CROP)
+  for (let p = 0; p < CROP * CROP; p++) gray[p] = 0.299 * rgba[p * 4] + 0.587 * rgba[p * 4 + 1] + 0.114 * rgba[p * 4 + 2]
+  let sum = 0
+  let n = 0
+  for (let y = 1; y < CROP - 1; y++) {
+    for (let x = 1; x < CROP - 1; x++) {
+      const p = y * CROP + x
+      const lap = gray[p - CROP] + gray[p + CROP] + gray[p - 1] + gray[p + 1] - 4 * gray[p]
+      sum += lap * lap
+      n++
+    }
+  }
+  return sum / n
 }

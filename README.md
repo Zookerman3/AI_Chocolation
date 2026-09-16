@@ -90,26 +90,57 @@ Keep this honest and current. The judges score it.
   reasonable default order; a cashier taps "Rearrange case" once to match their counter, and it's
   saved on that device from then on. A "Reset to default" button is there in case a rearrange goes
   wrong.
-- **Camera assist is on-device and measured, not trained.** No model download and no API: each cell
-  of the insert is cropped from a photo the cashier lines up with an on-screen outline, turned into a
-  392-number colour/texture fingerprint (`src/features/camera/features.ts`), and matched against a
-  735 KB gallery of our own labelled crops (`public/models/`). Measured on 64 photos of a mixed
-  30-slot box across four sessions, each session held out in turn and scored against the other
-  three (`node scripts/build-gallery.ts`): **92% top-1, 97% top-3**. On a session the gallery never
-  saw, read through the same whole-frame path the tablet uses: 93.6% top-1, 97.7% top-3, 87% of
-  cells auto-filled with 1.9% of those wrong, all 54 empty slots recognised with no false pieces —
-  about two confirm taps and one wrong auto-fill every three 16-piece boxes. Where it's weakest,
-  honestly: **Maple Cream vs Turtle** (both tan domes; most of the misses) and **Grey Salt Caramel
-  vs Crème Brûlée / Brownie Batter** (dark squares against black plastic). Those are what the
-  "please confirm" step is for. The gallery holds one physical piece per flavor, photographed 64
-  times; a second box of chocolates would tighten it further. Roboflow remains an opt-in override
-  (`.env.example`) if a hosted detector ever beats this.
-- **The camera needs the box lined up.** It reads fixed slots, so the cashier holds the tablet over
-  the open box until the insert fills the outline — about a second — then taps Capture. Only inserts
+- **Camera assist is on-device, measured, and honest about its edges.** No API and nothing trained
+  by us: each slot of the insert is cropped from a photo the cashier lines up with an on-screen
+  outline and described two ways — a 392-number colour/texture fingerprint
+  (`src/features/camera/features.ts`) and a 1280-number embedding from a pretrained MobileNetV2
+  (`embed.ts`: ONNX model zoo, ImageNet weights, int8, 2.5 MB, run in the browser by `onnxruntime-web`
+  in WebAssembly). Fused 0.7/0.3 (`fused.ts`), the crop is matched by nearest neighbour against a
+  gallery of our own labelled crops (`public/models/`, 1,920 crops from 64 photos of a mixed 30-slot
+  box across four sessions). Measured with each session held out in turn and scored against the other
+  three (`node scripts/build-gallery.ts` prints it): **99.2% top-1, 99.9% top-3** (colour alone: 92.2 /
+  96.8). The whole flow was also run in a real browser on three held-out photos: 27 of 27 pieces
+  right on each, no wrong auto-fills, no confirm taps, about 2.5 s from photo to result.
+  Then we broke it on purpose. 18 held-out frames, 27 conditions, through the shipped code path
+  (top-1 on occupied slots; "wrong auto" is a wrong piece added without asking, the failure that costs
+  the shop):
+
+  | Condition | Colour only (before) | Colour + network (now) |
+  |---|---|---|
+  | as shot | 94%, 9 wrong auto | 100%, 1 wrong auto |
+  | box a fifth of a cell off the outline | 29%, 50 wrong auto | 98%, 0 wrong auto |
+  | box a third of a cell off | 4% | 65%, 49 wrong auto — **the limit** |
+  | box 10% too big / too small for the outline | 44% / 35% | 95% / 98% |
+  | box rotated 3° / 7° / 12° | 76% / 36% / 7% | 99% / 97% / **54%** (12° is past the limit) |
+  | dim (×0.6) / very dim (×0.4) | 37% / 14% | 98% / 90% |
+  | bright (×1.4) / blown out (×1.8) | 78% / 54% | 100% / 93% |
+  | warm / cool white balance | 58% / 55% | 97% / 99% |
+  | low contrast, glare on every piece, JPEG quality 35 | 25% / 80% / 94% | 98% / 99% / 100% |
+  | sensor noise σ 10 / 20 / 35 | 94% / 83% / 64% | 99% / 95% / 89% |
+  | pieces turned 90° / 180° in their slots | 94% / 91% | 100% / 99% |
+  | a finger across one row | 74% | 87% |
+  | slight blur (3 px) | 91% | 97% |
+  | real blur (6 px / 10 px) | 86% / 75% | 79% / 52% — **refused instead** |
+
+  Blur is the one thing the network is *worse* at than colour, and it fails confidently, so the
+  detector measures sharpness first and refuses a soft frame with "hold still and capture again"
+  (`localDetector.ts`, threshold set in the gap between the 3 px and 6 px rows). If the network fails
+  to load — no WebAssembly, a broken download — the screen says "basic colour matching" and runs the
+  colour gallery instead, with the numbers in the left column. Where it is weakest even now: the
+  copper-splatter browns (Manhattan, Espresso Martini, Amaretto, Champagne, Turtle) under a strong
+  colour cast or heavy noise, which is what the "please confirm" step is for. The gallery holds one
+  physical piece per flavor, photographed 64 times; a second box of each would tighten it further.
+  Roboflow remains an opt-in override (`.env.example`) if a hosted detector ever beats this.
+- **The camera needs the box roughly lined up, and roughly overhead.** It reads fixed slots, so the
+  cashier holds the tablet over the open box until the insert fills the outline, then taps Capture.
+  "Roughly" is measured above: a fifth of a cell off or 7° of tilt is fine, a third of a cell or 12°
+  is not, and a steep angle isn't either — the fix for both is a grid-finder that snaps to the
+  chocolates themselves (the one `scripts/crop_cells.py` uses offline), not more photos. Only inserts
   we've measured are supported: 4×4 (16) and 5×6 (30); 6 and 10 are assumed 2×3 / 2×5 and need
-  checking against real boxes; 50 stays tap-only. Where the live preview isn't available (an
-  `http://` dev server on a phone, or a denied permission) it falls back to the OS camera and reads
-  the photo as if the insert filled 88% of it, which is less forgiving.
+  checking against real boxes; 50 stays tap-only. Where the live preview isn't available (an `http://`
+  dev server on a phone, or a denied permission) it falls back to the OS camera and reads the photo as
+  if the insert filled 88% of it, which is less forgiving. First open downloads about 20 MB (the
+  WebAssembly runtime is 14 MB of it, 3.7 MB compressed); after that everything is cached offline.
 - **Local device storage only.** Records live in the browser's localStorage, per device, with no
   backend, no login, and no sync across tablets. Losing the tab or clearing site data loses the data.
 - **The in-app timer isn't the full "measured, not guessed" story.** It correctly measures real

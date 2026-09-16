@@ -1,13 +1,22 @@
-// The gallery is every labelled training crop as a fingerprint, plus its label.
-// Classifying a new crop is nearest-neighbour: score it against all of them,
-// take the five closest, and let them vote weighted by similarity.
+// The gallery is every labelled training crop as a feature vector, plus its
+// label. Classifying a new crop is nearest-neighbour: score it against all of
+// them, take the five closest, and let them vote weighted by similarity.
 //
-// Shipped as two files in public/models/: gallery.json (labels, scale, meta)
-// and gallery.bin (one byte per value, 1920 x 392 = 735 KB). Quantising to a
-// byte cost nothing measurable — scripts/build-gallery.ts checks that every
-// time it runs.
+// Two galleries ship in public/models/, each as <name>.json (labels, scale,
+// meta) and <name>.bin (one byte per value):
+//   gallery-fused  colour fingerprint + network embedding (fused.ts), the one
+//                  the recognizer uses; 1920 x 1672 = 3.2 MB
+//   gallery-color  colour fingerprint only (features.ts), the fallback when the
+//                  network can't load; 1920 x 392 = 735 KB
+// Quantising to a byte cost nothing measurable — scripts/build-gallery.ts
+// checks that every time it runs.
 
-import { FEATURE_DIM, FEATURE_VERSION } from './features.ts'
+/** What a gallery must have been built with to be usable by the caller. */
+export interface GalleryKind {
+  name: string
+  featureVersion: string
+  dim: number
+}
 
 export interface GalleryMeta {
   featureVersion: string
@@ -40,14 +49,15 @@ export interface Candidate {
 
 export const LABEL_EMPTY = 'empty'
 
-/** Turns the shipped bytes back into unit vectors. */
-export function inflateGallery(meta: GalleryMeta, bytes: Uint8Array): Gallery {
-  if (meta.featureVersion !== FEATURE_VERSION) {
+/** Turns the shipped bytes back into unit vectors, refusing a gallery that was
+ * built with a different feature recipe than the app computes. */
+export function inflateGallery(meta: GalleryMeta, bytes: Uint8Array, kind: GalleryKind): Gallery {
+  if (meta.featureVersion !== kind.featureVersion) {
     throw new Error(
-      `Gallery was built for feature ${meta.featureVersion}, app computes ${FEATURE_VERSION}. Run: node scripts/build-gallery.ts`,
+      `Gallery ${kind.name} was built for feature ${meta.featureVersion}, app computes ${kind.featureVersion}. Run: node scripts/build-gallery.ts`,
     )
   }
-  if (meta.dim !== FEATURE_DIM || bytes.length !== meta.count * meta.dim) {
+  if (meta.dim !== kind.dim || bytes.length !== meta.count * meta.dim) {
     throw new Error(`Gallery shape mismatch: expected ${meta.count}x${meta.dim}, got ${bytes.length} bytes`)
   }
   const vectors = new Float32Array(meta.count * meta.dim)
@@ -90,24 +100,26 @@ export function classify(feature: Float32Array, gallery: Gallery, k = gallery.me
     .sort((a, b) => b.share - a.share)
 }
 
-let cached: Promise<Gallery> | null = null
+const cached = new Map<string, Promise<Gallery>>()
 
-/** Fetches and inflates the gallery once per page load. ~0.7 MB, precached by the
- * service worker after the first visit, so this works with no network at all. */
-export function loadGallery(base = '/models/'): Promise<Gallery> {
-  if (!cached) {
-    cached = (async () => {
-      const [metaRes, binRes] = await Promise.all([fetch(`${base}gallery.json`), fetch(`${base}gallery.bin`)])
+/** Fetches and inflates a gallery once per page load. Precached by the service
+ * worker after the first visit, so this works with no network at all. */
+export function loadGallery(kind: GalleryKind, base = '/models/'): Promise<Gallery> {
+  let p = cached.get(kind.name)
+  if (!p) {
+    p = (async () => {
+      const [metaRes, binRes] = await Promise.all([fetch(`${base}${kind.name}.json`), fetch(`${base}${kind.name}.bin`)])
       if (!metaRes.ok || !binRes.ok) {
-        throw new Error(`Could not load the flavor gallery (${metaRes.status}/${binRes.status})`)
+        throw new Error(`Could not load the flavor gallery ${kind.name} (${metaRes.status}/${binRes.status})`)
       }
       const meta = (await metaRes.json()) as GalleryMeta
       const bytes = new Uint8Array(await binRes.arrayBuffer())
-      return inflateGallery(meta, bytes)
+      return inflateGallery(meta, bytes, kind)
     })().catch((err) => {
-      cached = null // let the next attempt retry instead of caching the failure
+      cached.delete(kind.name) // let the next attempt retry instead of caching the failure
       throw err
     })
+    cached.set(kind.name, p)
   }
-  return cached
+  return p
 }

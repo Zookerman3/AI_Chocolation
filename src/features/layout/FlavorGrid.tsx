@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import type { KeyboardEvent } from 'react'
 import type { CaseLayout } from '../../domain/types.ts'
-import { getFlavor } from '../../data/flavors.ts'
+import { flavorOrPlaceholder } from '../../data/flavors.ts'
 
 interface FlavorGridProps { layout: CaseLayout; onTapCell: (index: number) => void; selectedIndex?: number | null; disabled?: boolean; query?: string }
 
@@ -15,7 +15,7 @@ export function FlavorGrid({ layout, onTapCell, selectedIndex = null, disabled =
 
   return <div className="flavor-grid" style={{ gridTemplateColumns: `repeat(${layout.cols}, 1fr)` }} role="grid">{layout.cells.map((flavorId, index) => {
     if (!flavorId) return <div key={index} className="flavor-tile flavor-tile--empty" aria-hidden="true" />
-    const flavor = getFlavor(flavorId)
+    const flavor = flavorOrPlaceholder(flavorId)
     const matches = !normalizedQuery || flavor.name.toLowerCase().includes(normalizedQuery)
     const classes = ['flavor-tile']; if (selectedIndex === index) classes.push('flavor-tile--selected'); if (normalizedQuery && !matches) classes.push('flavor-tile--dim')
     return <button key={index} ref={(el) => { buttonRefs.current[index] = el }} type="button" className={classes.join(' ')} tabIndex={index === focusedIndex ? 0 : -1} onFocus={() => setFocusedIndex(index)} onKeyDown={(e) => handleKeyDown(e, index)} onClick={() => onTapCell(index)} disabled={disabled}>

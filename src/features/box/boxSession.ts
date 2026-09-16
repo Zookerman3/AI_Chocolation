@@ -3,9 +3,10 @@
 // save, and export logic never need to know where a piece came from.
 
 import type { BoxRecord, BoxSession, BoxSize, FlavorId, PieceSource } from '../../domain/types.ts'
+import { newId } from '../../app/id.ts'
 
 export function startSession(size: BoxSize, now = Date.now()): BoxSession {
-  return { id: crypto.randomUUID(), size, pieces: [], startedAt: now, undoCount: 0 }
+  return { id: newId(), size, pieces: [], startedAt: now, undoCount: 0 }
 }
 
 /** Adds a piece. Ignored once the box is full, so a stray extra tap can't overfill it. */
@@ -77,7 +78,7 @@ export function toRecord(session: BoxSession, now = Date.now()): BoxRecord {
   const method = session.pieces.some((p) => p.source === 'camera') ? 'camera-assisted' : 'tap'
 
   return {
-    id: crypto.randomUUID(),
+    id: newId(),
     size: session.size,
     pieces: tally(session),
     startedAt: new Date(session.startedAt).toISOString(),

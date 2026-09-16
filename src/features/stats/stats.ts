@@ -1,6 +1,46 @@
 // Stretch goal: a view across many boxes for whoever plans production and flavors.
 
-import type { BoxRecord, FlavorId } from '../../domain/types.ts'
+import type { BoxRecord, BoxSize, FlavorId } from '../../domain/types.ts'
+import { BOX_SIZES } from '../../domain/types.ts'
+
+/** How long boxes of one size actually take, in whole seconds. */
+export interface SizeDuration {
+  size: BoxSize
+  /** How many saved boxes of this size the numbers come from. */
+  count: number
+  /** Null when no box of this size has been saved yet. */
+  medianSeconds: number | null
+  fastestSeconds: number | null
+  slowestSeconds: number | null
+}
+
+/** Seconds per box, by box size.
+ *
+ * This is the number the prompt actually asks about — whether the tablet is faster than
+ * the paper tally — so it gets the median rather than the mean: one box abandoned
+ * mid-rush and finished ten minutes later would drag a mean somewhere useless. The
+ * range and n are reported alongside so a median over two boxes can't read as a result.
+ * Every size is returned, including sizes with no boxes yet, so the row doesn't reflow
+ * as data comes in. */
+export function secondsPerBox(records: readonly BoxRecord[]): SizeDuration[] {
+  return BOX_SIZES.map((size) => {
+    const seconds = records
+      .filter((r) => r.size === size)
+      .map((r) => r.durationMs / 1000)
+      .sort((a, b) => a - b)
+    const n = seconds.length
+    if (n === 0) return { size, count: 0, medianSeconds: null, fastestSeconds: null, slowestSeconds: null }
+    const median = n % 2 ? seconds[(n - 1) / 2] : (seconds[n / 2 - 1] + seconds[n / 2]) / 2
+    return {
+      size,
+      count: n,
+      medianSeconds: Math.round(median),
+      fastestSeconds: Math.round(seconds[0]),
+      slowestSeconds: Math.round(seconds[n - 1]),
+    }
+  })
+}
+
 
 export interface FlavorCount {
   flavorId: FlavorId

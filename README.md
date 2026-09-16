@@ -108,10 +108,6 @@ Keep this honest and current. The judges score it.
   | Condition | Colour only (before) | Colour + network (now) |
   |---|---|---|
   | as shot | 94%, 9 wrong auto | 100%, 1 wrong auto |
-  | box a fifth of a cell off the outline | 29%, 50 wrong auto | 98%, 0 wrong auto |
-  | box a third of a cell off | 4% | 65%, 49 wrong auto — **the limit** |
-  | box 10% too big / too small for the outline | 44% / 35% | 95% / 98% |
-  | box rotated 3° / 7° / 12° | 76% / 36% / 7% | 99% / 97% / **54%** (12° is past the limit) |
   | dim (×0.6) / very dim (×0.4) | 37% / 14% | 98% / 90% |
   | bright (×1.4) / blown out (×1.8) | 78% / 54% | 100% / 93% |
   | warm / cool white balance | 58% / 55% | 97% / 99% |
@@ -122,6 +118,24 @@ Keep this honest and current. The judges score it.
   | slight blur (3 px) | 91% | 97% |
   | real blur (6 px / 10 px) | 86% / 75% | 79% / 52% — **refused instead** |
 
+  And where the box is. The outline on screen is a guide: `gridFinder.ts` looks for the insert's
+  actual lattice near it (the chocolates are the landmarks, fitted with a homography, ~60 ms) and
+  reads the cells through that, so the box can be off-centre, turned, closer, farther or tilted. It
+  found the grid on 18 of 18 frames in every row below:
+
+  | Where the box is | Fixed cells, colour only | Fixed cells, + network | **Grid-finder, + network (shipped)** |
+  |---|---|---|---|
+  | on the outline | 94% | 100% | 100% |
+  | a fifth / a third of a cell off | 29% / 4% | 98% / 65% | 99% / 99% |
+  | 10% too big / too small for the outline | 44% / 35% | 95% / 98% | 99% / 99% |
+  | turned 7° / 12° | 36% / 7% | 97% / 54% | 100% / 99% |
+  | tilted 15° / 30° / 45°, 30° + 20° twist | — | — | 99% / 100% / 99% / 100% |
+
+  In a real browser: the box at 70% of the outline turned 6°, a third of a cell off turned 10°, at
+  45° tilt, and at 30° tilt with a twist — 27 of 27 pieces right on each, 0 wrong, 0 taps, ~3.7 s.
+  The tilt rows are synthetic (a straight-down photo warped as a tilted camera would see it), which
+  proves the geometry, not the look of a piece's side; real angled photos are the open check.
+
   Blur is the one thing the network is *worse* at than colour, and it fails confidently, so the
   detector measures sharpness first and refuses a soft frame with "hold still and capture again"
   (`localDetector.ts`, threshold set in the gap between the 3 px and 6 px rows). If the network fails
@@ -131,16 +145,17 @@ Keep this honest and current. The judges score it.
   colour cast or heavy noise, which is what the "please confirm" step is for. The gallery holds one
   physical piece per flavor, photographed 64 times; a second box of each would tighten it further.
   Roboflow remains an opt-in override (`.env.example`) if a hosted detector ever beats this.
-- **The camera needs the box roughly lined up, and roughly overhead.** It reads fixed slots, so the
-  cashier holds the tablet over the open box until the insert fills the outline, then taps Capture.
-  "Roughly" is measured above: a fifth of a cell off or 7° of tilt is fine, a third of a cell or 12°
-  is not, and a steep angle isn't either — the fix for both is a grid-finder that snaps to the
-  chocolates themselves (the one `scripts/crop_cells.py` uses offline), not more photos. Only inserts
-  we've measured are supported: 4×4 (16) and 5×6 (30); 6 and 10 are assumed 2×3 / 2×5 and need
-  checking against real boxes; 50 stays tap-only. Where the live preview isn't available (an `http://`
-  dev server on a phone, or a denied permission) it falls back to the OS camera and reads the photo as
-  if the insert filled 88% of it, which is less forgiving. First open downloads about 20 MB (the
-  WebAssembly runtime is 14 MB of it, 3.7 MB compressed); after that everything is cached offline.
+- **The camera needs enough pieces in the box to find the grid, and a real-angle check.** The
+  grid-finder needs about a third of the slots filled (8 pieces in a 30, 5 in a 16, 4 in a 6 or 10)
+  to lock on; below that it falls back to reading the outline as drawn, which is when "roughly lined
+  up" matters again. The angled-camera numbers above are synthetic; a piece photographed from 45°
+  shows its side and the divider wall starts hiding it, and that is what still needs six real photos
+  to confirm, and maybe one angled shoot to add to the gallery if it doesn't hold. Only inserts we've
+  measured are supported: 4×4 (16) and 5×6 (30); 6 and 10 are assumed 2×3 / 2×5 and need checking
+  against real boxes; 50 stays tap-only. Where the live preview isn't available (an `http://` dev
+  server on a phone, or a denied permission) it falls back to the OS camera and the same grid-finder
+  reads the photo. First open downloads about 20 MB (the WebAssembly runtime is 14 MB of it, 3.7 MB
+  compressed); after that everything is cached offline.
 - **Local device storage only.** Records live in the browser's localStorage, per device, with no
   backend, no login, and no sync across tablets. Losing the tab or clearing site data loses the data.
 - **The in-app timer isn't the full "measured, not guessed" story.** It correctly measures real

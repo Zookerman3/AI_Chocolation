@@ -2,7 +2,7 @@
 // side of the shop can pivot by flavor directly instead of parsing a nested column.
 
 import type { BoxRecord } from '../../domain/types.ts'
-import { getFlavor } from '../../data/flavors.ts'
+import { flavorOrPlaceholder } from '../../data/flavors.ts'
 
 const HEADERS = [
   'box_id',
@@ -36,7 +36,7 @@ export function toCSV(records: readonly BoxRecord[]): string {
         record.durationMs,
         record.undoCount,
         piece.flavorId,
-        getFlavor(piece.flavorId).name,
+        flavorOrPlaceholder(piece.flavorId).name,
         piece.count,
       ].map(csvField),
     ),

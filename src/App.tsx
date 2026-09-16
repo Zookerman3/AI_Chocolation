@@ -3,6 +3,7 @@ import { BoxScreen } from './features/box/BoxScreen.tsx'
 import { RecordsScreen } from './features/records/RecordsScreen.tsx'
 import { StatsScreen } from './features/stats/StatsScreen.tsx'
 import { generateDemoRecords } from './app/demoData.ts'
+import { ErrorBoundary } from './app/ErrorBoundary.tsx'
 
 const DEMO_MODE_KEY = 'ai-chocolation:demo-mode'
 
@@ -47,9 +48,14 @@ export default function App() {
         <button type="button" aria-label="Records" aria-current={tab === 'records'} onClick={() => setTab('records')}><span aria-hidden="true">☷</span> Records</button>
         <button type="button" aria-label="Stats" aria-current={tab === 'stats'} onClick={() => setTab('stats')}><span aria-hidden="true">↗</span> Stats</button>
       </nav>
-      {tab === 'box' && <BoxScreen onSaved={() => setRefreshKey((k) => k + 1)} />}
-      {tab === 'records' && <RecordsScreen key={refreshKey} demoRecords={demoRecords} onChange={() => setRefreshKey((k) => k + 1)} />}
-      {tab === 'stats' && <StatsScreen key={refreshKey} demoRecords={demoRecords} />}
+      {/* A saved layout or record can outlive the catalog it points at. Render paths use
+          flavorOrPlaceholder and don't throw; this is the backstop for everything else,
+          so a crash shows a reload card instead of a blank tablet mid-rush. */}
+      <ErrorBoundary>
+        {tab === 'box' && <BoxScreen onSaved={() => setRefreshKey((k) => k + 1)} />}
+        {tab === 'records' && <RecordsScreen key={refreshKey} demoRecords={demoRecords} onChange={() => setRefreshKey((k) => k + 1)} />}
+        {tab === 'stats' && <StatsScreen key={refreshKey} demoRecords={demoRecords} />}
+      </ErrorBoundary>
       <footer className="app-footer"><span>Made for the sweet spot.</span><span>Offline-ready · v1.0</span></footer>
     </main>
   )

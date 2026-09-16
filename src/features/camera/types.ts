@@ -18,8 +18,8 @@ export interface Detection {
 }
 
 /** Anything that can turn a photo into a list of detections implements this — the
- * Roboflow-hosted model, a future in-house one, or the stub used when no model is
- * configured yet. The box session and UI never need to know which. */
+ * on-device recogniser (localDetector.ts), the opt-in Roboflow client, or the stub
+ * that sees nothing. The box session and UI never need to know which. */
 export interface FlavorDetector {
   detect(image: Blob): Promise<Detection[]>
 }

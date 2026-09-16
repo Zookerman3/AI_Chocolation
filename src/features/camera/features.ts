@@ -1,15 +1,16 @@
-// One chocolate -> one 392-number fingerprint.
+// One chocolate -> one 392-number colour/texture fingerprint.
 //
-// This is the whole "model". No neural network, no download: a colour histogram,
-// a tiny lightness-normalised thumbnail and a texture histogram, all computed
-// from a 96x96 crop of a single cell. Measured on the four training sessions,
-// leaving each one out in turn: 92.7% top-1, 97.0% top-3 (scripts/build-gallery.ts
-// prints the current numbers). That clears the Phase 2 checkpoint without a
-// 25 MB model, which matters at a counter on shop wifi.
+// A colour histogram, a tiny lightness-normalised thumbnail and a texture
+// histogram, all computed from a 96x96 crop of a single cell. On its own this
+// cleared the Phase 2 checkpoint (92.2% top-1 held out) and is what the camera
+// falls back to if the network in embed.ts can't load. Fused with the network's
+// embedding (fused.ts) it is what ships: the fingerprint is sharp on the
+// look-alike pairs, the embedding is robust to light and framing, and together
+// they score 99.2%. scripts/build-gallery.ts prints the current numbers for both.
 //
-// The same function builds the gallery (Node, scripts/build-gallery.ts) and
+// The same function builds the galleries (Node, scripts/build-gallery.ts) and
 // classifies at the counter (browser). Never let those two drift: change this
-// file, rebuild the gallery, and bump FEATURE_VERSION so a stale gallery is
+// file, rebuild the galleries, and bump FEATURE_VERSION so a stale gallery is
 // refused instead of silently mis-scoring.
 //
 // No DOM here: input is raw RGBA bytes so it runs in Node, a worker, or a test.

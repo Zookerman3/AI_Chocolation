@@ -4,13 +4,17 @@ Our Build Track entry for the **Chocolathon** (WSU AI Club × Cocoa Dolce × Lov
 
 > **What it does:** A tablet screen for the counter — the cashier taps the chocolate a customer
 > just picked, once per piece, until the count matches the box size, then saves one exportable
-> record per box (CSV/JSON), with the assembly time measured automatically.
+> record per box (CSV/JSON), with the assembly time measured automatically. Or, for a full box,
+> taps **Use camera**: a photo of the open box is read slot by slot on the tablet itself (no server,
+> no API key), the pieces it's sure of are added, and the rest come back as one-tap confirms.
 >
 > **Live link:** _TBD (Vercel)_ · **What to click first:** Turn on "Demo mode," then open the
-> Records and Stats tabs to see sample data without needing real chocolates on hand.
+> Records and Stats tabs to see sample data without needing real chocolates on hand. With a real
+> 16 or 30 box: pick its size, tap "Use camera", get the box roughly inside the outline, Capture.
 
-Stack: React 19 + Vite + TypeScript, Vitest, ESLint. There is no CI: `npm run check` on your own
-laptop is the gate before anything merges.
+Stack: React 19 + Vite + TypeScript, Vitest, ESLint; `onnxruntime-web` runs the camera's recogniser
+in WebAssembly on the device. There is no CI: `npm run check` on your own laptop is the gate before
+anything merges.
 
 ---
 
@@ -65,6 +69,35 @@ Create them once with `npm run labels`.
 
 **Writing good agent tasks:** use `/task` or the "Agent task" issue template. One area of the
 code, about an hour of work, checkable acceptance criteria. Vague issues fail.
+
+## Camera assist: how it works and how to rebuild it
+
+`src/features/camera/` reads a photo of the open box slot by slot. In order: `gridFinder.ts` finds
+the insert's real grid near the on-screen outline (the chocolates are the landmarks; off-centre,
+turned, smaller, larger and tilted all work); `localDetector.ts` cuts every slot out through that
+fit and refuses a frame that's blurred all over; each crop is described by `features.ts` (a
+392-number colour/texture fingerprint) and `embed.ts` (a 1280-number embedding from a pretrained
+MobileNetV2, ONNX model zoo, int8, 2.5 MB, run by `onnxruntime-web`); `fused.ts` joins the two
+0.7/0.3; `gallery.ts` matches the result by nearest neighbour against every labelled training crop
+in `public/models/gallery-fused.{json,bin}`; `applyDetections.ts` auto-adds a slot whose winning
+vote share is ≥ 0.8 and sends the rest to the cashier. `recognizer.ts` loads the network and the
+gallery once, with a progress veil, and falls back to the colour-only `gallery-color` if the network
+can't load. Measured numbers are in "Known limits" below; the full story, including what was tried
+and dropped, is in [docs/camera-assist-handoff.md](docs/camera-assist-handoff.md).
+
+To add photos or flavors and rebuild (Node 22.18+, Python 3 with `opencv-python-headless pillow
+pillow-heif numpy`):
+
+1. Photograph a mixed box from roughly above, several shots per session, and write one label file per
+   session: `Photos/Training_Set_N/training_label_N`, one line per slot, `row.col Flavor Name`;
+   unlisted slots are empty.
+2. `python3 scripts/crop_cells.py path/to/Photos --out dataset --qa qa` — one crop per slot, named
+   `<session>_<photo>_r<row>c<col>.jpg`; look at the contact sheets in `qa/` before trusting them.
+3. `node scripts/build-gallery.ts dataset` — prints leave-one-session-out accuracy (each session
+   scored against the others, so no photo is ever scored against its own shoot) and writes both
+   galleries. Both must be rebuilt whenever `features.ts`, `embed.ts`, `fused.ts` or the model file
+   changes; the version strings in those files are baked into the galleries so a stale one is refused
+   at load.
 
 ## Repo settings (owner, one time)
 

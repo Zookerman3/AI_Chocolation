@@ -37,25 +37,19 @@ cashier taps where they just grabbed. Pick box size → tap a tile per piece →
 undo → save only when the count matches → one record per box → CSV/JSON export → timer on every box.
 Plus a demo mode with sample boxes (judges open the link without chocolates) and a stats view.
 
-**Phase 2 (Wed–Fri): camera assist, only if it passes the checkpoint.**
-Switched from the original per-cell-crop plan to whole-box object detection, matching
-[Roboflow's own chocolate-identification writeup](https://blog.roboflow.com/identifying-chocolates-with-computer-vision/):
-one photo of the open box, a model draws a bounding box and a class around each visible piece. A
-detection at or above ~80% confidence auto-adds to the box; anything under that, or a class that
-doesn't map to a known flavor, goes to the cashier for a one-tap confirm or correction. The
-integration (`src/features/camera/`) is fully built and tested against a stub detector — `applyDetections`
-does the auto-add/review/overflow split, `CameraScreen` does the capture-and-confirm UI, and
-`roboflowDetector.ts` is a ready client for a Roboflow-hosted model. **What's still missing is the
-model itself**: like the Roboflow article, it needs real photos of our actual bonbons, labeled with
-classes named exactly as our flavor ids (see `roboflowDetector.ts`'s doc comment) via Roboflow's
-Label Assist + Dataset Health Check, the same as the reference project. Until that exists, set
-`VITE_ROBOFLOW_API_KEY` / `VITE_ROBOFLOW_MODEL_ID` (see `.env.example`) and the app runs the stub
-detector instead — the flow works, it just won't detect anything real.
+**Phase 2 (Wed–Fri): camera assist — checkpoint passed, on-device.**
+Per-cell crop and match, as originally planned, and it needs no model download: the cashier lines the
+open box up with an outline on screen, the app crops each insert slot, computes a colour/texture
+fingerprint (`src/features/camera/features.ts`) and matches it against a gallery of our own labelled
+crops (`public/models/`, 735 KB, built by `node scripts/build-gallery.ts` from the Photos folder).
+A cell whose winning vote share is ≥ 0.8 auto-adds; anything under that, or an unsure "empty", goes to
+the cashier for a one-tap confirm or fix, with a thumbnail of what the camera saw. Measured with each
+photo session held out in turn: 92% top-1 / 97% top-3 (checkpoint was 80 / 95). The gallery must be
+rebuilt whenever `features.ts` changes — bump `FEATURE_VERSION` so a stale gallery is refused.
+`roboflowDetector.ts` stays as an opt-in override via `.env.example`.
 
-**Checkpoint: Wednesday night.** On held-out photos, if the camera's top-1 accuracy is at least ~80%
-and top-3 is at least ~95%, ship camera assist. Otherwise it goes in the video and Known limits as
-tested and measured, and we ship tap-only. That checkpoint needs real training photos taken by
-someone on the team — nobody has taken any yet.
+**Checkpoint: Wednesday night — cleared.** Held-out top-1 92.2%, top-3 96.8% (`scripts/build-gallery.ts`
+prints the current figures). What's left is real-counter timing, not accuracy.
 
 **Thursday:** time 10+ real boxes per method (seconds per box, corrections). Those numbers go in the video.
 
@@ -68,7 +62,7 @@ Shared types live in [src/domain/types.ts](src/domain/types.ts). Change them onl
 
 ### Facts to respect
 
-- ~25 bonbon flavors at $3.35 each, some seasonal. Box sizes: 6, 10, 16, 30, 50 pieces.
+- 27 bonbon flavors at $3.35 each, some seasonal (25 in the public feed plus Orange and Strawberry, sold in-store only — see `src/data/flavors.local.json`). Box sizes: 6, 10, 16, 30, 50 pieces.
   Box price depends only on size, never on flavor.
 - The store's product data has **mislabeled handles**: `amaretto-copy` is Confetti Cake and
   `confetti-cake-copy` is Tea & Honey. Always identify flavors by product **title**, never by handle.

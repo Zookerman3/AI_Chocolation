@@ -3,10 +3,17 @@
 
 import type { Flavor } from '../domain/types.ts'
 import raw from './flavors.json'
+import local from './flavors.local.json'
 
 // The JSON file has no way to express the ChocolateType union, so it's typed as
 // `string | null` on disk; scripts/fetch-flavors.mjs only ever writes valid values.
-export const FLAVORS: readonly Flavor[] = raw.flavors as Flavor[]
+//
+// flavors.local.json holds pieces sold in the shop but absent from the public feed
+// (Orange and Strawberry as of Sep 2026). It's a separate file so a re-fetch can't
+// drop them; sorted by name after the merge so the tile grid stays alphabetical.
+export const FLAVORS: readonly Flavor[] = [...(raw.flavors as Flavor[]), ...(local.flavors as Flavor[])].sort((a, b) =>
+  a.name.localeCompare(b.name),
+)
 export const FLAVORS_FETCHED_AT: string = raw.fetchedAt
 
 const byId = new Map(FLAVORS.map((f) => [f.id, f]))
@@ -17,4 +24,21 @@ export function getFlavor(id: string): Flavor {
   const flavor = byId.get(id)
   if (!flavor) throw new Error(`Unknown flavor id: ${id}`)
   return flavor
+}
+
+/** Looks up a flavor without throwing. Use this on every render path: a saved record or
+ * a saved case layout can outlive a catalog re-fetch that renames an id, and a white
+ * screen at the counter is worse than one tile reading "Unknown piece". */
+export function findFlavor(id: string): Flavor | undefined {
+  return byId.get(id)
+}
+
+/** A stand-in for an id that's no longer in the catalog, so stale data still renders. */
+export function placeholderFlavor(id: string): Flavor {
+  return { id, name: 'Unknown piece', imageUrl: '', chocolate: null, allergens: [], seasonal: false, sourceUrl: '' }
+}
+
+/** Never throws: the real flavor when the id is known, a labelled placeholder when not. */
+export function flavorOrPlaceholder(id: string): Flavor {
+  return byId.get(id) ?? placeholderFlavor(id)
 }

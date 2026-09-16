@@ -90,15 +90,26 @@ Keep this honest and current. The judges score it.
   reasonable default order; a cashier taps "Rearrange case" once to match their counter, and it's
   saved on that device from then on. A "Reset to default" button is there in case a rearrange goes
   wrong.
-- **Camera assist is built but not trained.** The full capture → detect → auto-add/confirm flow
-  (`src/features/camera/`) is implemented and tested end to end, following the same whole-box
-  object-detection approach as
-  [Roboflow's own chocolate-identification project](https://blog.roboflow.com/identifying-chocolates-with-computer-vision/).
-  It's currently running a stub detector that finds nothing, because no one has taken real photos of
-  our bonbons yet — that's the one part of this no amount of code can substitute for. Set
-  `VITE_ROBOFLOW_API_KEY` / `VITE_ROBOFLOW_MODEL_ID` (`.env.example`) once a model exists; nothing else
-  needs to change. Still gated behind the Wednesday-night accuracy checkpoint in `CLAUDE.md` — if that
-  isn't cleared, this stays a tap-only submission and that's fine, tap-only already works end to end.
+- **Camera assist is on-device and measured, not trained.** No model download and no API: each cell
+  of the insert is cropped from a photo the cashier lines up with an on-screen outline, turned into a
+  392-number colour/texture fingerprint (`src/features/camera/features.ts`), and matched against a
+  735 KB gallery of our own labelled crops (`public/models/`). Measured on 64 photos of a mixed
+  30-slot box across four sessions, each session held out in turn and scored against the other
+  three (`node scripts/build-gallery.ts`): **92% top-1, 97% top-3**. On a session the gallery never
+  saw, read through the same whole-frame path the tablet uses: 93.6% top-1, 97.7% top-3, 87% of
+  cells auto-filled with 1.9% of those wrong, all 54 empty slots recognised with no false pieces —
+  about two confirm taps and one wrong auto-fill every three 16-piece boxes. Where it's weakest,
+  honestly: **Maple Cream vs Turtle** (both tan domes; most of the misses) and **Grey Salt Caramel
+  vs Crème Brûlée / Brownie Batter** (dark squares against black plastic). Those are what the
+  "please confirm" step is for. The gallery holds one physical piece per flavor, photographed 64
+  times; a second box of chocolates would tighten it further. Roboflow remains an opt-in override
+  (`.env.example`) if a hosted detector ever beats this.
+- **The camera needs the box lined up.** It reads fixed slots, so the cashier holds the tablet over
+  the open box until the insert fills the outline — about a second — then taps Capture. Only inserts
+  we've measured are supported: 4×4 (16) and 5×6 (30); 6 and 10 are assumed 2×3 / 2×5 and need
+  checking against real boxes; 50 stays tap-only. Where the live preview isn't available (an
+  `http://` dev server on a phone, or a denied permission) it falls back to the OS camera and reads
+  the photo as if the insert filled 88% of it, which is less forgiving.
 - **Local device storage only.** Records live in the browser's localStorage, per device, with no
   backend, no login, and no sync across tablets. Losing the tab or clearing site data loses the data.
 - **The in-app timer isn't the full "measured, not guessed" story.** It correctly measures real

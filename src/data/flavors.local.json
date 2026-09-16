@@ -1,0 +1,23 @@
+{
+  "note": "Flavors on sale in the shop that are not in the public store feed. scripts/fetch-flavors.mjs never touches this file; src/data/flavors.ts merges it into FLAVORS. Allergens are unknown for these two (nothing published to read them from), so the list is empty — that means 'not recorded', not 'none'.",
+  "flavors": [
+    {
+      "id": "orange",
+      "name": "Orange",
+      "imageUrl": "/flavors/orange.jpg",
+      "chocolate": null,
+      "allergens": [],
+      "seasonal": false,
+      "sourceUrl": ""
+    },
+    {
+      "id": "strawberry",
+      "name": "Strawberry",
+      "imageUrl": "/flavors/strawberry.jpg",
+      "chocolate": null,
+      "allergens": [],
+      "seasonal": false,
+      "sourceUrl": ""
+    }
+  ]
+}

@@ -43,11 +43,11 @@ Per-cell crop and match: the cashier gets the open box roughly inside an outline
 with a homography, so off-centre, turned, smaller, larger and tilted all work — it needs about a
 third of the slots filled, else it reads the outline as drawn), the app cuts each slot out through
 that fit and describes it two ways: a colour/texture fingerprint (`src/features/camera/features.ts`)
-and a 1280-number embedding from a pretrained MobileNetV2 (`embed.ts`; ONNX model zoo, ImageNet weights, nothing trained by us,
-2.5 MB int8, run on the tablet by `onnxruntime-web` in WebAssembly). The two are fused 0.7/0.3
-(`fused.ts`) and matched by nearest neighbour against a gallery of our own labelled crops
-(`public/models/gallery-fused.{json,bin}`, 3.1 MB, built by `node scripts/build-gallery.ts` from the
-crops `scripts/crop_cells.py` cuts out of the Photos folder). A cell whose winning vote share is
+and a 1280-number embedding from a pretrained MobileNetV2 (`embed.ts`; ONNX model zoo, ImageNet
+weights, nothing trained by us, 2.5 MB int8, run on the tablet by `onnxruntime-web` in WebAssembly).
+The two are fused 0.7/0.3 (`fused.ts`) and matched by nearest neighbour against a gallery of our
+own labelled crops (`public/models/gallery-fused.{json,bin}`, 3.1 MB, built by
+`node scripts/build-gallery.ts` from the crops `scripts/crop_cells.py` cuts out of the Photos folder). A cell whose winning vote share is
 ≥ 0.8 auto-adds; anything under that, or an unsure "empty", goes to the cashier for a one-tap
 confirm or fix, with a thumbnail of what the camera saw. A frame that is blurred all over is refused
 with "hold still" rather than guessed at. If the network can't load, `recognizer.ts` falls back to the

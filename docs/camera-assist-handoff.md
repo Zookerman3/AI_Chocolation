@@ -22,63 +22,92 @@ what-to-click-first note.
 | Thursday timing (10+ real boxes per method) | Not done |
 | README robustness table | In README Known limits, re-measured through the shipped code |
 
-Local branches on Stephen's Mac at hand-off: `main` (HEAD), `Zookerman3/camera-assist`,
-`Zookerman3/dataset`, `pr-13`, `pr13-fix`. The repo root also holds an **untracked** `dataset/`
-folder and a stray `dataset_1.zip` (29 MB). Never `git add -A`; add paths by name.
+Everything above is merged to `main` as of Wed evening; feature branches were squash-merged on
+GitHub and deleted. The repo root on Stephen's Mac also holds an **untracked** `dataset/` folder and
+a stray `dataset_1.zip` (29 MB). Never `git add -A`; add paths by name.
 
-## 2. What shipped: how the camera assist works
+## 2. What shipped: how the camera assist works (as of the `grid-finder` merge)
 
 The prompt gives no training data, so Roboflow-style detection was replaced with something we
-could build and measure ourselves in two days. The cashier lines the open box up with an outline
-drawn on the live preview; the app knows the insert geometry, so it does not need to find pieces —
-it crops every slot at a fixed place and asks "which flavor does this crop look most like?"
+could build and measure ourselves in two days. The insert is a fixed grid, so the app never has to
+learn what a chocolate looks like in order to find one: it finds the grid, cuts out every slot, and
+asks "which flavor does this crop look most like?" against a gallery of our own labelled crops.
 
-Pipeline, all in `src/features/camera/`:
+Pipeline, all in `src/features/camera/`, in the order a photo goes through it:
 
-1. `grid.ts` — `GRID_BY_SIZE = {6: 2×3, 10: 2×5, 16: 4×4, 30: 5×6}`; 50 → `null` (tap-only).
-   `outlineRect(grid, W, H)` draws the outline at 88 % of the frame with square cells, centred.
-   `cells(grid, outline)` yields cells in the training label order (left→right, then down) with a
-   6 % inset (`read` rect) so divider walls stay out of the crop.
-2. `features.ts` — `resizeToCrop` (area average to 96×96), then `featureFromCrop` → 392-d
-   fingerprint: HSV histogram 12×4×4 over a disk r=36 (weight 3.0), LAB 8×8 thumbnail with L
-   mean-centred (weight 1.0), Sobel-magnitude 8-bin histogram over the disk (weight 2.5),
-   L2-normalised. HSV/LAB follow OpenCV conventions; Sobel uses reflect-101 borders.
-   `FEATURE_VERSION = 'v1-hsv12x4x4-lab8-tex8'`, `FEATURE_DIM = 392`.
-3. `gallery.ts` — `public/models/gallery.{json,bin}` (735 KB): every training crop's fingerprint
-   quantised to uint8 per dimension (`lo`/`hi` arrays in the meta). `inflateGallery` refuses a
-   gallery whose `featureVersion` or byte count doesn't match. `classify(feature, gallery, k=5)`
-   = cosine kNN with similarity-weighted votes → ranked `{label, share}`. `LABEL_EMPTY = 'empty'`.
-4. `localDetector.ts` — `createLocalDetector({grid, outline?, gallery?, thumbnails?})`
-   implements the existing `FlavorDetector` interface. `detectOnBitmap` draws the frame to a
-   canvas, reads each cell, classifies, and emits `Detection[]` with `cell: {row, col}` and a JPEG
-   `thumbnail`. A confident `empty` (share ≥ threshold) is skipped; an unsure empty goes to review
-   with the best real flavor at `threshold − 0.01` so it's never auto-added.
-5. `config.ts` — `detectorKind` is `'roboflow'` only when `VITE_ROBOFLOW_API_KEY` and
-   `VITE_ROBOFLOW_MODEL_ID` are set, otherwise `'local'`. `getDetector(grid)`.
-6. `CameraScreen.tsx` — `useCameraPreview` (getUserMedia, environment camera, 1920×1440),
-   `GridOutline` overlay, Capture draws video → canvas → blob → detector; falls back to a file
-   input (`aria-label="Take a photo of the box"`) when the preview isn't available (http dev
-   server on a phone, denied permission). Gallery is preloaded on mount when the detector is local.
-7. `applyDetections.ts` (pre-existing) — auto-adds pieces with confidence ≥ 0.8, routes the rest
-   to a confirm/fix list. `PendingRow` shows the thumbnail and "Row r, slot c".
+1. `CameraScreen.tsx` — live rear-camera preview (`useCameraPreview`, getUserMedia 1920×1440) with
+   the `GridOutline` overlay; Capture draws video → canvas → blob → `getDetector(grid).detect`. Falls
+   back to a file input (`aria-label="Take a photo of the box"`) where the preview isn't available.
+   Preloads the recognizer on mount (`preloadRecognizer`, progress veil with MB counts), shows a
+   "basic colour matching" banner if the network failed to load, and the "please confirm" list
+   (`PendingRow`: thumbnail, "Row r, slot c", flavor dropdown).
+2. `config.ts` — `detectorKind` is `'roboflow'` only when both `VITE_ROBOFLOW_*` vars are set,
+   otherwise `'local'`. `preloadRecognizer()` lazy-imports `recognizer.ts` so the WebAssembly runtime
+   stays out of the main bundle (it's a separate chunk).
+3. `recognizer.ts` — loads `public/models/mobilenetv2.onnx` (2.5 MB) with `onnxruntime-web/wasm`
+   (one thread, `.wasm` served from the app via a `?url` import, no CDN, no WebGPU because it crashes
+   iOS Safari) and the fused gallery; on any failure falls back to the colour gallery and returns
+   `{ kind: 'color', reason }`. One cached promise per page load.
+4. `grid.ts` — `GRID_BY_SIZE = {6: 2×3, 10: 2×5, 16: 4×4, 30: 5×6}`; 50 → `null` (tap-only).
+   `outlineRect` (88 % of the frame, square cells, centred), `cells` (reading order = label order,
+   6 % inset).
+5. `gridFinder.ts` — `findGrid(rgba, W, H, grid, outline)`: downscale to 480 px; piece candidates =
+   saturated blobs (S>58, V>45) of plausible area/aspect with a dark ring around them; 750 similarity
+   seeds around the outline (offset ±1 cell, scale 0.6–1.3, turn ±20°) × 3 rounds of nearest-node
+   assignment + affine least squares; best by inliers, ties toward the outline; then homography
+   refinement from the best fit and each of its ±1-cell shifts (a tilted box compresses the far rows
+   and an affine fit locks on one row off); plausibility gate (pitch 0.5–1.6× outline, centre within
+   1.6 cells, ≥ 40 % of landmarks and ≥ max(4, 30 % of slots) inliers) else `null`. `warpCell`
+   samples a slot through the homography (bilinear). ~60 ms to find, ~200 ms to cut a 30-box.
+6. `localDetector.ts` — `readCells` (canvas → full-frame RGBA) → `cutCells` (grid-finder or the
+   outline as drawn, each slot at 96 px for colour and 160 px for the network) → `assertSharp`
+   (refuses a frame whose sharpest cell scores under 15 mean-squared-Laplacian: blur is the one
+   thing the network gets confidently wrong) → `classifyCells` (pure; fused or colour-only path).
+   A confident `empty` is skipped; an unsure empty goes to review with the best real flavor at
+   `threshold − 0.01` so it's never auto-added. Emits `Detection[]` with `cell` and a JPEG thumbnail.
+7. `features.ts` — 392-d colour/texture fingerprint from the 96 px crop (HSV hist 12×4×4 over a
+   disk, weight 3.0; LAB 8×8 thumbnail with L mean-centred, 1.0; Sobel-magnitude 8-bin hist, 2.5;
+   L2-normalised). `FEATURE_VERSION = 'v1-hsv12x4x4-lab8-tex8'`. Also `sharpness()`.
+8. `embed.ts` — pure: 160 px RGBA crops → ImageNet-normalised NCHW tensor → the network's
+   GlobalAveragePool output (tensor `'464'`, 1280-d) → unit vectors. `EMBED_VERSION =
+   'mobilenetv2-12-gap464-int8-160'`. Running the network is the caller's job (browser: recognizer;
+   Node: the gallery builder) so both produce identical numbers.
+9. `fused.ts` — `fuse(color, embedding)` = concat(√0.7·colour, √0.3·embedding), so cosine of two
+   fused vectors = 0.7·cos(colour) + 0.3·cos(embedding). Defines the two gallery kinds:
+   `gallery-fused` (1672-d, 3.1 MB) and `gallery-color` (392-d, 735 KB).
+10. `gallery.ts` — uint8-per-dimension quantised rows + labels; `inflateGallery(meta, bytes, kind)`
+    refuses a version/shape mismatch; `classify` = cosine kNN, k=5, similarity-weighted vote →
+    ranked `{label, share}`; `loadGallery(kind)` cached per kind. `LABEL_EMPTY = 'empty'`.
+11. `applyDetections.ts` — auto-adds `confidence ≥ 0.8`, routes the rest to review;
+    `confirmDetection` for the cashier's pick.
 
-Other touches in that merge: `types.ts` (`cell?`, `thumbnail?` on `Detection`), `BoxScreen.tsx`
-("Use camera" disabled when `gridFor(size)` is null), `vite.config.ts` (`bin`/`jpg`/`json` added to
-the PWA precache glob), `package.json` (devDep `jpeg-js` for the Node gallery builder), `index.css`
-(`.camera-*`, `.pending-thumb`), tests `features.test.ts`, `grid.test.ts`, `gallery.test.ts`,
-and README "Known limits" + CLAUDE.md Phase 2 rewritten with measured numbers.
+Also: `roboflowDetector.ts` (opt-in override), `stubDetector.ts` (sees nothing; tests/demos),
+`types.ts` (`Detection`, `FlavorDetector`). Tests sit next to each file; `gridFinder.test.ts` draws
+synthetic frames, `localDetector.test.ts` uses a fake embedder and toy galleries, `embed.test.ts`
+checks the tensor layout and the fusion arithmetic. `vite.config.ts` precaches `onnx`/`wasm` with a
+20 MB per-file cap; `.gitattributes` marks `*.onnx` and `*.bin` binary.
 
-### Rebuilding the gallery
+### Rebuilding the galleries
 
 ```
-node scripts/build-gallery.ts path/to/dataset      # Node 22.18+ (runs .ts directly)
+node scripts/build-gallery.ts path/to/dataset [--holdout N] [--out dir]   # Node 22.18+
 ```
 
-It reads `dataset/<label>/<session>_<photo>_r<row>c<col>.jpg`, prints leave-one-session-out
-accuracy (each session scored against the other three, so no crop is ever scored against its own
-shoot), then writes `public/models/gallery.{json,bin}`. It uses the browser's own `features.ts`, so
-the tablet and the gallery cannot disagree. **Any change to `features.ts` must bump
-`FEATURE_VERSION` and rebuild**, or the app will refuse the stale gallery at load.
+It reads `dataset/<label>/<session>_<photo>_r<row>c<col>.jpg`, embeds every crop through the same
+ONNX runtime the tablet uses, prints leave-one-session-out accuracy for colour-only, embedding-only
+and fused, and writes `public/models/gallery-fused.{json,bin}` and `gallery-color.{json,bin}`.
+`--holdout N` leaves session N out of the written galleries (that is how every number in README was
+scored); `--out` for a scratch directory. **Any change to `features.ts`, `embed.ts`, `fused.ts` or
+the model file must rebuild both galleries**; the version strings are baked in and a stale gallery is
+refused at load.
+
+The model file was made from ONNX model zoo `mobilenetv2-12.onnx`
+(`https://media.githubusercontent.com/media/onnx/models/main/validated/vision/classification/mobilenet/model/mobilenetv2-12.onnx`):
+extract the subgraph `input` → `'464'` (`onnx.utils.extract_model`), make H/W dynamic, convert to
+opset 13 (`onnx.version_converter`; opset 12 lacks per-channel DequantizeLinear), then
+`onnxruntime.quantization.quantize_static` (QDQ, per-channel int8 weights, uint8 activations,
+MinMax calibration on ~170 stratified crops at 160 px). 160 px scored 98.2 % held-out alone vs
+97.8 % at 224 and runs twice as fast.
 
 ### Flavors
 
@@ -207,17 +236,16 @@ recognizer chunk is lazy-loaded; galleries are `gallery-fused` (3.1 MB) and `gal
 96 px crop); PWA precache raised to 20 MB. Fused held-out: 99.2 / 99.9. Browser end-to-end on three
 held-out photos: 27/27 each, ~2.5 s. Perturbation sweep re-run through the shipped code: see README.
 
-## 6. Not yet applied: `crash-proofing.patch`
+## 6. Crash-proofing (applied and merged Wed afternoon)
 
-On Stephen's Mac at `~/Downloads/crash-proofing.patch` (30.8 KB, `git am` format, branch name
-`Zookerman3/crash-proofing`). It adds `src/app/ErrorBoundary.tsx` (a `.crash` card instead of a
+Branch `Zookerman3/crash-proofing`, from `~/Downloads/crash-proofing.patch`. It added `src/app/ErrorBoundary.tsx` (a `.crash` card instead of a
 white screen), `src/app/id.ts` (`newId()`, used by `boxSession.ts` — a fallback for `crypto.randomUUID`,
 which is unavailable on plain http and older Safari), `flavorOrPlaceholder` guards in BoxScreen / RecordsScreen /
 StatsScreen / FlavorGrid / `csv.ts` (a record with a retired flavor id no longer throws),
 `App.tsx` screens wrapped in `<ErrorBoundary>`, and `stats.ts` `secondsPerBox(records)` (median /
 fastest / slowest / count per box size, 4 tests) shown as a "Seconds per box" card on StatsScreen.
-Apply with `git checkout -b Zookerman3/crash-proofing main && git am ~/Downloads/crash-proofing.patch && npm run check`.
-`git am` needs `user.name`/`user.email` set and no leftover `.git/rebase-apply`.
+It was applied by writing the files into the working tree and committing from Terminal (see
+section 7 for why), not with `git am`.
 
 ## 7. Process traps (each of these cost real time)
 
@@ -253,13 +281,15 @@ own. `roboflowDetector.ts` stays as the opt-in override in `.env.example`.
 
 ## 9. What does not survive the session
 
-The scoring harnesses (whole-frame e2e run, the 27-condition perturbation generator, the
-MobileNet feature extractor, the product-photo lattice fit) lived in the Cowork container and are
-gone. What remains reproducible from this repo: `scripts/build-gallery.ts` (held-out numbers),
-`scripts/crop_cells.py` (dataset), and the recipe in section 5. Re-creating the sweep is ~1 h:
-perturb the rectified session-4 frames with OpenCV, run them through
-`cells() → resizeToCrop → featureFromCrop → classify` exactly as `localDetector.ts` does, and score
-against `training_label_4`.
+The scoring harnesses (the 27-condition perturbation generator and the synthetic tilt generator in
+OpenCV, the Node scripts that run frames through `cutCells → classifyCells` with the `--holdout 4`
+galleries, the Playwright script that drives the built app in headless Chromium and checks the box
+tally against `training_label_4`, the quantisation script) lived in the Cowork container and are
+gone. What remains reproducible from this repo: `scripts/build-gallery.ts` (held-out numbers, and
+`--holdout` for honest scoring), `scripts/crop_cells.py` (dataset), and the recipes in sections 2
+and 5. Re-creating the sweep is ~1 h: perturb the rectified session-4 frames with OpenCV, import
+`cutCells`/`classifyCells` from `localDetector.ts` in a Node script (the module has no DOM
+dependency below `readCells`; feed jpeg-js RGBA), and score against `training_label_4`.
 
 ## 10. Critical path to Saturday
 

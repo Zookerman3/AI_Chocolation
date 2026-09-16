@@ -1,7 +1,11 @@
-// Where the cells are. The camera never searches for chocolates: the cashier
-// lines the box up with an outline on screen, and the cells are arithmetic from
-// there. That is the difference between this and the object-detection approach
-// — no bounding boxes to learn, and a half-empty box is no harder than a full one.
+// Where the cells are. The insert is a fixed grid, so the camera never has to
+// learn what a chocolate looks like in order to find one: the cashier gets the
+// box roughly inside an outline on screen, gridFinder.ts snaps a rows x cols
+// lattice to the pieces it can see, and every slot — full or empty — is
+// arithmetic from there. That is the difference between this and the
+// object-detection approach: no bounding boxes to learn, and a half-empty box
+// is no harder than a full one. This file is the arithmetic; the outline it
+// describes is also the fallback when no lattice can be found.
 
 import type { BoxSize } from '../../domain/types.ts'
 

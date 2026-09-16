@@ -6,8 +6,10 @@ import type { BoxSession, FlavorId } from '../../domain/types.ts'
 import { addPiece, isComplete } from '../box/boxSession.ts'
 import type { Detection } from './types.ts'
 
-/** Matches the Phase 2 checkpoint's top-1 accuracy bar in CLAUDE.md: a detection
- * this confident is auto-added, anything under it goes to the cashier instead. */
+/** A detection this confident is auto-added, anything under it goes to the
+ * cashier instead. For the on-device recogniser "confidence" is the winner's
+ * share of the nearest-neighbour vote, and 0.8 is where scripts/build-gallery.ts
+ * measured ~89% of slots auto-filling at ~97% precision. */
 export const DEFAULT_CONFIDENCE_THRESHOLD = 0.8
 
 export interface ApplyDetectionsResult {

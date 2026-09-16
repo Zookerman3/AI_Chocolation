@@ -9,6 +9,9 @@ const detectMock = vi.fn()
 
 vi.mock('./config.ts', () => ({
   isCameraModelConfigured: true,
+  // 'roboflow' here means "a detector that takes whole photos" — it keeps the
+  // screen from trying to preload the on-device gallery, which jsdom can't fetch.
+  detectorKind: 'roboflow',
   getDetector: () => ({ detect: detectMock }),
 }))
 

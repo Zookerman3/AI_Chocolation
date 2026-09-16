@@ -20,7 +20,7 @@ describe('FlavorGrid', () => {
   })
 
   it('moves focus between tiles with arrow keys, following the grid shape', () => {
-    const layout = defaultLayout() // 5 columns
+    const layout = defaultLayout()
     render(<FlavorGrid layout={layout} onTapCell={vi.fn()} />)
 
     const first = screen.getByRole('button', { name: new RegExp(FLAVORS[0].name) })
@@ -31,8 +31,9 @@ describe('FlavorGrid', () => {
     const second = screen.getByRole('button', { name: new RegExp(FLAVORS[1].name) })
     expect(document.activeElement).toBe(second)
 
+    // Down from column 1 lands one full row later, whatever width the catalog makes the grid.
     fireEvent.keyDown(second, { key: 'ArrowDown' })
-    const belowSecond = screen.getByRole('button', { name: new RegExp(FLAVORS[6].name) }) // row 2, col 1 in a 5-col grid
+    const belowSecond = screen.getByRole('button', { name: new RegExp(FLAVORS[1 + layout.cols].name) })
     expect(document.activeElement).toBe(belowSecond)
   })
 

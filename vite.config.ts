@@ -23,6 +23,9 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // The nearest-neighbour gallery (public/models, ~0.7 MB) and the in-store
+        // flavor photos ship with the build and must be there with the wifi down.
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,json,bin}'],
         // Flavor photos are hosted on Shopify's CDN, off-origin, so the default
         // precache (same-origin build output) doesn't cover them. Cache each one
         // the first time it's viewed, so the case is still browsable offline

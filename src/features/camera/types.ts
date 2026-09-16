@@ -10,6 +10,11 @@ export interface Detection {
   box: { x: number; y: number; width: number; height: number }
   /** The detector's raw class string, kept for debugging an unmapped detection. */
   rawClass: string
+  /** Grid position, when the detector reads fixed cells (1-based, reading order). */
+  cell?: { row: number; col: number }
+  /** Small data-URL image of what was read, so the cashier can see what the camera
+   * saw next to its guess instead of trusting a name and a percentage. */
+  thumbnail?: string
 }
 
 /** Anything that can turn a photo into a list of detections implements this — the

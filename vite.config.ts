@@ -23,9 +23,13 @@ export default defineConfig({
         ],
       },
       workbox: {
-        // The nearest-neighbour gallery (public/models, ~0.7 MB) and the in-store
-        // flavor photos ship with the build and must be there with the wifi down.
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,json,bin}'],
+        // The recognizer ships with the build and must be there with the wifi
+        // down: the galleries (public/models, ~4 MB), the network
+        // (mobilenetv2.onnx, 2.5 MB), the WebAssembly runtime that runs it
+        // (~14 MB, emitted by Vite from onnxruntime-web) and the in-store flavor
+        // photos. Workbox's default cap is 2 MiB per file, hence the override.
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,json,bin,onnx,wasm}'],
+        maximumFileSizeToCacheInBytes: 20 * 1024 * 1024,
         // Flavor photos are hosted on Shopify's CDN, off-origin, so the default
         // precache (same-origin build output) doesn't cover them. Cache each one
         // the first time it's viewed, so the case is still browsable offline

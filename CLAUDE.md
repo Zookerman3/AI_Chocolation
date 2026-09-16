@@ -37,19 +37,27 @@ cashier taps where they just grabbed. Pick box size → tap a tile per piece →
 undo → save only when the count matches → one record per box → CSV/JSON export → timer on every box.
 Plus a demo mode with sample boxes (judges open the link without chocolates) and a stats view.
 
-**Phase 2 (Wed–Fri): camera assist — checkpoint passed, on-device.**
-Per-cell crop and match, as originally planned, and it needs no model download: the cashier lines the
-open box up with an outline on screen, the app crops each insert slot, computes a colour/texture
-fingerprint (`src/features/camera/features.ts`) and matches it against a gallery of our own labelled
-crops (`public/models/`, 735 KB, built by `node scripts/build-gallery.ts` from the Photos folder).
-A cell whose winning vote share is ≥ 0.8 auto-adds; anything under that, or an unsure "empty", goes to
-the cashier for a one-tap confirm or fix, with a thumbnail of what the camera saw. Measured with each
-photo session held out in turn: 92% top-1 / 97% top-3 (checkpoint was 80 / 95). The gallery must be
-rebuilt whenever `features.ts` changes — bump `FEATURE_VERSION` so a stale gallery is refused.
-`roboflowDetector.ts` stays as an opt-in override via `.env.example`.
+**Phase 2 (Wed–Fri): camera assist — checkpoint passed, on-device, robust.**
+Per-cell crop and match: the cashier lines the open box up with an outline on screen (roughly —
+a fifth of a cell off or 7° of tilt is fine), the app crops each insert slot and describes it two
+ways: a colour/texture fingerprint (`src/features/camera/features.ts`) and a 1280-number embedding
+from a pretrained MobileNetV2 (`embed.ts`; ONNX model zoo, ImageNet weights, nothing trained by us,
+2.5 MB int8, run on the tablet by `onnxruntime-web` in WebAssembly). The two are fused 0.7/0.3
+(`fused.ts`) and matched by nearest neighbour against a gallery of our own labelled crops
+(`public/models/gallery-fused.{json,bin}`, 3.1 MB, built by `node scripts/build-gallery.ts` from the
+crops `scripts/crop_cells.py` cuts out of the Photos folder). A cell whose winning vote share is
+≥ 0.8 auto-adds; anything under that, or an unsure "empty", goes to the cashier for a one-tap
+confirm or fix, with a thumbnail of what the camera saw. A frame that is blurred all over is refused
+with "hold still" rather than guessed at. If the network can't load, `recognizer.ts` falls back to the
+colour-only gallery (`gallery-color`, 735 KB) and the screen says so.
+Measured with each photo session held out in turn: **99.2% top-1 / 99.9% top-3** fused (colour alone
+92.2 / 96.8; checkpoint was 80 / 95). Both galleries must be rebuilt whenever `features.ts`,
+`embed.ts`, `fused.ts` or the model file changes — the version strings in those files are baked into
+the galleries so a stale one is refused at load. `roboflowDetector.ts` stays as an opt-in override via
+`.env.example`.
 
-**Checkpoint: Wednesday night — cleared.** Held-out top-1 92.2%, top-3 96.8% (`scripts/build-gallery.ts`
-prints the current figures). What's left is real-counter timing, not accuracy.
+**Checkpoint: Wednesday night — cleared.** Held-out top-1 99.2%, top-3 99.9% (`scripts/build-gallery.ts`
+prints the current figures, for the colour-only fallback too). What's left is real-counter timing.
 
 **Thursday:** time 10+ real boxes per method (seconds per box, corrections). Those numbers go in the video.
 

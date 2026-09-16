@@ -3,3 +3,7 @@
 
 # Shell scripts must stay LF or bash on Mac and Git Bash will fail to run them.
 *.sh text eol=lf
+
+# The on-device recognizer's model and galleries are binary; never normalise them.
+*.onnx binary
+*.bin binary

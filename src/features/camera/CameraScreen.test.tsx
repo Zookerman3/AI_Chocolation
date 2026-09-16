@@ -13,6 +13,7 @@ vi.mock('./config.ts', () => ({
   // screen from trying to preload the on-device gallery, which jsdom can't fetch.
   detectorKind: 'roboflow',
   getDetector: () => ({ detect: detectMock }),
+  preloadRecognizer: () => new Promise(() => {}),
 }))
 
 beforeEach(() => {

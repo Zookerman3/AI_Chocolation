@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { classify, inflateGallery } from './gallery.ts'
 import type { GalleryMeta } from './gallery.ts'
 import { FEATURE_DIM, FEATURE_VERSION } from './features.ts'
+import { COLOR_GALLERY } from './fused.ts'
 
 /** A tiny gallery of one-hot-ish vectors, quantised the way the builder does it. */
 function toyGallery(labels: string[], seeds: number[]) {
@@ -39,17 +40,17 @@ function probe(seed: number): Float32Array {
 describe('inflateGallery', () => {
   it('refuses a gallery built for a different feature version', () => {
     const { meta, bytes } = toyGallery(['a'], [0])
-    expect(() => inflateGallery({ ...meta, featureVersion: 'v0-old' }, bytes)).toThrow(/built for feature/)
+    expect(() => inflateGallery({ ...meta, featureVersion: 'v0-old' }, bytes, COLOR_GALLERY)).toThrow(/built for feature/)
   })
 
   it('refuses a gallery whose byte count does not match its shape', () => {
     const { meta, bytes } = toyGallery(['a', 'b'], [0, 5])
-    expect(() => inflateGallery(meta, bytes.subarray(0, 10))).toThrow(/shape mismatch/)
+    expect(() => inflateGallery(meta, bytes.subarray(0, 10), COLOR_GALLERY)).toThrow(/shape mismatch/)
   })
 
   it('restores unit vectors from bytes', () => {
     const { meta, bytes } = toyGallery(['a'], [3])
-    const g = inflateGallery(meta, bytes)
+    const g = inflateGallery(meta, bytes, COLOR_GALLERY)
     let n = 0
     for (let d = 0; d < meta.dim; d++) n += g.vectors[d] * g.vectors[d]
     expect(Math.sqrt(n)).toBeCloseTo(1, 4)
@@ -59,7 +60,7 @@ describe('inflateGallery', () => {
 describe('classify', () => {
   it('ranks the nearest label first with a share that reflects the vote', () => {
     const { meta, bytes } = toyGallery(['lemon', 'lemon', 'lemon', 'lime', 'lime'], [10, 10, 10, 200, 200])
-    const g = inflateGallery(meta, bytes)
+    const g = inflateGallery(meta, bytes, COLOR_GALLERY)
     const ranked = classify(probe(10), g)
     expect(ranked[0].label).toBe('lemon')
     expect(ranked[0].share).toBeGreaterThan(0.5)
@@ -68,14 +69,14 @@ describe('classify', () => {
 
   it('is unanimous when every neighbour agrees', () => {
     const { meta, bytes } = toyGallery(['lemon', 'lemon', 'lemon', 'lemon', 'lemon'], [10, 10, 10, 10, 10])
-    const ranked = classify(probe(10), inflateGallery(meta, bytes))
+    const ranked = classify(probe(10), inflateGallery(meta, bytes, COLOR_GALLERY))
     expect(ranked).toEqual([{ label: 'lemon', share: 1 }])
   })
 
   it('only counts the k nearest', () => {
     // four far "lime" rows must not outvote the one near "lemon" when k=1
     const { meta, bytes } = toyGallery(['lemon', 'lime', 'lime', 'lime', 'lime'], [10, 300, 301, 302, 303])
-    const ranked = classify(probe(10), inflateGallery(meta, bytes), 1)
+    const ranked = classify(probe(10), inflateGallery(meta, bytes, COLOR_GALLERY), 1)
     expect(ranked).toEqual([{ label: 'lemon', share: 1 }])
   })
 })

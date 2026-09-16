@@ -17,6 +17,7 @@ what-to-click-first note.
 | Training dataset (1,920 labelled crops) | Built and verified; lives on Stephen's Mac, **not in the repo** |
 | Crash-proofing patch (error boundary, seconds-per-box stat) | Applied and merged Wed afternoon (`Zookerman3/crash-proofing`) |
 | MobileNetV2 upgrade (fixes lighting/camera robustness) | **Ported** on `Zookerman3/mobilenet` (Wed afternoon): int8 model at 160 px, fused gallery, blur guard, colour fallback; see README Known limits for the measured table |
+| Grid-finder (box only roughly on the outline; tilt OK) | **Ported** on `Zookerman3/grid-finder` (Wed evening): `gridFinder.ts`, measured in README |
 | Vercel deploy + iPad test over HTTPS | Not done |
 | Thursday timing (10+ real boxes per method) | Not done |
 | README robustness table | In README Known limits, re-measured through the shipped code |
@@ -262,8 +263,11 @@ against `training_label_4`.
 
 ## 10. Critical path to Saturday
 
-1. Decide MobileNet port vs freeze (section 5). Either way, README gets the robustness table.
-2. Apply `crash-proofing.patch` (section 6), `npm run check`, PR, merge.
+1. ~~Decide MobileNet port vs freeze~~ Done, merged. Grid-finder done (`gridFinder.ts`): the box only
+   has to be roughly inside the outline; measured limits in README. Open check: six real angled photos
+   of the 30-box (20°/35°/50°) through `scripts/crop_cells.py` + the recogniser, to confirm the
+   synthetic tilt numbers hold for real piece sides.
+2. ~~Apply `crash-proofing.patch`~~ Done, merged.
 3. Deploy to Vercel — the live camera preview needs **HTTPS** (`getUserMedia`), so the iPad test
    only works on the deployed link.
 4. iPad capture test on a real 16 and 30 box; confirm the 6 and 10 inserts are 2×3 / 2×5 (one

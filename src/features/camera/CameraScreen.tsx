@@ -172,8 +172,8 @@ export function CameraScreen({ session, onSessionChange, onClose }: CameraScreen
           <p className="eyebrow">Camera assist · {grid.rows}×{grid.cols} insert</p>
           <h2 id="camera-heading">Scan the box</h2>
           <p className="helper-text">
-            Line the insert up with the outline, then capture. Anything the camera isn't sure about comes back for one
-            tap.
+            Get the open box inside the outline — close is good enough, it finds the slots itself — then capture.
+            Anything the camera isn't sure about comes back for one tap.
           </p>
         </div>
         <button type="button" className="button button-dark" onClick={onClose}>
@@ -223,8 +223,8 @@ export function CameraScreen({ session, onSessionChange, onClose }: CameraScreen
           </div>
           <h3>{busy ? 'Reading your photo…' : 'Ready when you are'}</h3>
           <p>
-            Hold the phone straight above the open box and fill the frame with the insert — the camera reads it as a{' '}
-            {grid.rows}×{grid.cols} grid.
+            Hold the phone over the open box so the insert fills most of the frame — straight above is best, a tilt is
+            fine — and it reads it as a {grid.rows}×{grid.cols} grid.
           </p>
           <label className="button button-accent camera-upload">
             <span>Take a photo</span>

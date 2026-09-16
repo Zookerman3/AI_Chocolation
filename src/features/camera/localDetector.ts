@@ -7,11 +7,19 @@
 // With the network loaded (recognizer.ts) each crop is described by colour
 // fingerprint + embedding, fused; without it, by the colour fingerprint alone.
 // Same code path either way, just a different gallery and one more step.
+//
+// The outline is a guide, not a requirement: gridFinder.ts looks for the
+// insert's actual lattice near it (off-centre, turned, tilted, closer or
+// farther) and the cells are read through that fit. When it can't find one —
+// too few pieces in the box, nothing box-like near the outline — the cells are
+// read from the outline itself, exactly as before.
 
 import type { Detection, FlavorDetector } from './types.ts'
 import { FLAVORS } from '../../data/flavors.ts'
-import { featureFromCrop, resizeToCrop, sharpness } from './features.ts'
-import { toEmbedCrop } from './embed.ts'
+import { CROP, featureFromCrop, resizeRgba, resizeToCrop, sharpness } from './features.ts'
+import { EMBED_SIZE, toEmbedCrop } from './embed.ts'
+import { cellBounds, findGrid, warpCell } from './gridFinder.ts'
+import type { GridFit } from './gridFinder.ts'
 import { fuse } from './fused.ts'
 import { classify, LABEL_EMPTY } from './gallery.ts'
 import type { Recognizer } from './recognizer.ts'
@@ -37,7 +45,15 @@ export interface LocalDetectorOptions {
   recognizer?: Promise<Recognizer>
   /** Attach a small thumbnail of each cell to its detection. */
   thumbnails?: boolean
+  /** Look for the insert's real lattice near the outline (default) or read the
+   * outline's cells as drawn. */
+  findGrid?: boolean
 }
+
+/** Cells are read through the fitted lattice at this size, then shrunk to the
+ * two sizes the features want. About one source pixel per sample on a 1920-wide
+ * frame of a 5x6 box, so nothing is lost on the way down. */
+const WARP_SIZE = 256
 
 /** One insert slot, cut out of the frame at the two sizes the features want. */
 export interface CellCrop {
@@ -68,7 +84,7 @@ export function createLocalDetector(options: LocalDetectorOptions): FlavorDetect
       const [recognizer, bitmap] = await Promise.all([recognizerPromise, decode(image)])
       let crops: CellCrop[]
       try {
-        crops = readCells(bitmap, options)
+        crops = readCells(bitmap, options).crops
       } finally {
         bitmap.close?.()
       }
@@ -78,14 +94,13 @@ export function createLocalDetector(options: LocalDetectorOptions): FlavorDetect
   }
 }
 
-/** The DOM part: draw the frame once, cut every cell out of it. */
+/** The DOM part: draw the frame once, then hand its pixels to cutCells. */
 export function readCells(
   bitmap: ImageBitmap | HTMLCanvasElement | HTMLVideoElement,
-  options: Pick<LocalDetectorOptions, 'grid' | 'outline'>,
-): CellCrop[] {
+  options: Pick<LocalDetectorOptions, 'grid' | 'outline' | 'findGrid'>,
+): { crops: CellCrop[]; fit: GridFit | null } {
   const frameWidth = 'videoWidth' in bitmap ? bitmap.videoWidth : bitmap.width
   const frameHeight = 'videoHeight' in bitmap ? bitmap.videoHeight : bitmap.height
-  const outline = options.outline ?? outlineRect(options.grid, frameWidth, frameHeight)
 
   const canvas = document.createElement('canvas')
   canvas.width = frameWidth
@@ -93,21 +108,50 @@ export function readCells(
   const ctx = canvas.getContext('2d', { willReadFrequently: true })
   if (!ctx) throw new Error('Could not get a 2D canvas context')
   ctx.drawImage(bitmap, 0, 0)
+  const frame = ctx.getImageData(0, 0, frameWidth, frameHeight).data
+  return cutCells(frame, frameWidth, frameHeight, options)
+}
 
-  return cells(options.grid, outline).map((cell) => {
+/** The pure part of reading: find the lattice (or take the outline), cut every
+ * cell out at the two sizes the features want. */
+export function cutCells(
+  frame: Uint8ClampedArray,
+  frameWidth: number,
+  frameHeight: number,
+  options: Pick<LocalDetectorOptions, 'grid' | 'outline' | 'findGrid'>,
+): { crops: CellCrop[]; fit: GridFit | null } {
+  const outline = options.outline ?? outlineRect(options.grid, frameWidth, frameHeight)
+  const fit = options.findGrid === false ? null : findGrid(frame, frameWidth, frameHeight, options.grid, outline)
+
+  const crops = cells(options.grid, outline).map((cell) => {
+    if (fit) {
+      const big = warpCell(frame, frameWidth, frameHeight, fit.homography, cell.row, cell.col, WARP_SIZE)
+      return {
+        row: cell.row,
+        col: cell.col,
+        box: cellBounds(fit.homography, cell.row, cell.col),
+        color: resizeRgba(big, WARP_SIZE, WARP_SIZE, CROP),
+        embed: resizeRgba(big, WARP_SIZE, WARP_SIZE, EMBED_SIZE),
+      }
+    }
     const sx = Math.round(cell.read.x * frameWidth)
     const sy = Math.round(cell.read.y * frameHeight)
     const sw = Math.max(1, Math.round(cell.read.width * frameWidth))
     const sh = Math.max(1, Math.round(cell.read.height * frameHeight))
-    const pixels = ctx.getImageData(sx, sy, sw, sh).data
+    const region = new Uint8ClampedArray(sw * sh * 4)
+    for (let y = 0; y < sh; y++) {
+      const from = ((sy + y) * frameWidth + sx) * 4
+      region.set(frame.subarray(from, from + sw * 4), y * sw * 4)
+    }
     return {
       row: cell.row,
       col: cell.col,
       box: cell.box,
-      color: resizeToCrop(pixels, sw, sh),
-      embed: toEmbedCrop(pixels, sw, sh),
+      color: resizeToCrop(region, sw, sh),
+      embed: toEmbedCrop(region, sw, sh),
     }
   })
+  return { crops, fit }
 }
 
 /** Refuses a frame that is blurred all over. Judged on the sharpest cell: blur

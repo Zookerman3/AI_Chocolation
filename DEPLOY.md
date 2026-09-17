@@ -10,6 +10,19 @@ vercel --prod          # in AI_Chocolation → https://ai-chocolation.vercel.app
 vercel --prod          # in Chocolate_Dashboard → https://case-notes-delta.vercel.app
 ```
 
+Step 2 is done: Upstash Redis `upstash-kv-apricot-garden` (free plan) is connected to
+`ai-chocolation` for production, preview and development, installed from the CLI with
+`vercel integration add upstash/upstash-kv`. `/api/health` reports `store: redis, durable: true`.
+
+There is no DELETE endpoint. To remove a record (a smoke test, a box saved by mistake) go
+straight to Redis, from a folder linked to the `ai-chocolation` project:
+
+```bash
+vercel env pull .env.local     # writes KV_REST_API_URL and KV_REST_API_TOKEN (git-ignored)
+curl -s "$KV_REST_API_URL" -H "Authorization: Bearer $KV_REST_API_TOKEN" \
+  -d '["HDEL","ai-chocolation:boxes","smoke-1"]'      # → {"result":1}
+```
+
 Two things the first deploy taught us, both already in the repo:
 
 - Files under `api/` must import each other with `.js` specifiers, not `.ts`. Vercel compiles the

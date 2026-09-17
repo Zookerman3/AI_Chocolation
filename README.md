@@ -197,11 +197,12 @@ Keep this honest and current. The judges score it.
   localStorage, per device, with no login. Each saved box is also posted to `/api/boxes` on the same
   origin (queued when offline, retried on reconnect), which is what the office dashboard reads.
   Clearing site data on a tablet loses whatever hadn't synced yet.
-- **The server forgets on a cold start until Redis is connected.** With no database configured the
-  API holds boxes in memory (`/api/health` reports `durable: false` and the dashboard shows the
-  same note). Connecting Upstash Redis in the Vercel project (DEPLOY.md step 2) makes it durable;
-  until then, a quiet stretch can empty the dashboard's live view while every tablet still has its
-  own records.
+- **The server copy lives in one free-tier Redis.** The API stores boxes in Upstash Redis, connected
+  through Angel's Vercel account (`/api/health` reports `store: redis, durable: true`). Free tier is
+  plenty for a shop's volume, but there is no backup and no delete endpoint: removing a bad record
+  means an `HDEL` against the database (DEPLOY.md). If the Vercel env vars are ever missing at
+  deploy time the API silently falls back to memory — `/api/health` and the dashboard's state chip
+  say so, which is the thing to check before a demo.
 - **The in-app timer isn't the full "measured, not guessed" story.** It correctly measures real
   elapsed time per box in the app, but the seconds-per-box number for the submission comes from
   timing real people assembling real boxes by hand (planned for Thursday), not just this timer.

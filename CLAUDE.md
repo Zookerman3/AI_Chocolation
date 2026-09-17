@@ -141,7 +141,8 @@ humans, or by agents only when the issue explicitly names them.
 Data is stored on the device (localStorage); that copy is the source of truth. Each saved box is
 also posted to `/api/boxes` (Vercel serverless functions in `api/`, same origin), which the office
 dashboard (Chocolate_Dashboard) reads. Live: https://ai-chocolation.vercel.app and
-https://case-notes-delta.vercel.app — see DEPLOY.md for how to redeploy and add Redis.
+https://case-notes-delta.vercel.app — the store is Upstash Redis (durable); see DEPLOY.md for
+how to redeploy and how to remove a record.
 
 ## Code conventions
 

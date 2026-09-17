@@ -32,8 +32,10 @@ export async function syncOnce(options: SyncOptions): Promise<SyncOutcome> {
   const acked = loadAcked()
   const queue = pending(options.records, acked)
 
+  // Nothing to send is not a sync. The last-synced stamp only moves when the
+  // server has actually acknowledged something, so a fresh tablet reads "not
+  // synced yet" rather than a green "synced" that never touched the network.
   if (queue.length === 0) {
-    markSyncedNow()
     return { sent: 0, rejected: [], remaining: 0, durable: false, error: null }
   }
 

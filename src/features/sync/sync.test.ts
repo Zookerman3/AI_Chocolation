@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BoxRecord } from '../../domain/types.ts'
 import { SyncError } from './client.ts'
-import { loadAcked } from './outbox.ts'
+import { loadAcked, loadLastSync } from './outbox.ts'
 import { syncOnce } from './sync.ts'
 
 function box(id: string, overrides: Partial<BoxRecord> = {}): BoxRecord {
@@ -99,6 +99,17 @@ describe('syncOnce', () => {
     const out = await syncOnce({ records: [], push })
     expect(push).not.toHaveBeenCalled()
     expect(out.error).toBeNull()
+    // Nothing went up, so nothing was synced: the chip must not turn green on this.
+    expect(loadLastSync()).toBeNull()
+  })
+
+  it('stamps the last sync only when the server acknowledged something', async () => {
+    await syncOnce({ records: [box('a')], push: accepts })
+    const stamped = loadLastSync()
+    expect(stamped).not.toBeNull()
+    // A later empty pass leaves the stamp at the time of the real push.
+    await syncOnce({ records: [box('a')], push: accepts })
+    expect(loadLastSync()?.getTime()).toBe(stamped?.getTime())
   })
 })
 

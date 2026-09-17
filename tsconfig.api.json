@@ -1,0 +1,24 @@
+{
+  // vite/client is listed in `types` because api/e2e.test.ts imports the
+  // tablet's real sync client, which reads import.meta.env. The serverless
+  // functions themselves use process.env only and pull in nothing from src.
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.api.tsbuildinfo",
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "types": ["node", "vitest/globals", "vite/client"]
+  },
+  "include": ["api"]
+}

@@ -4,6 +4,9 @@ import { RecordsScreen } from './features/records/RecordsScreen.tsx'
 import { StatsScreen } from './features/stats/StatsScreen.tsx'
 import { generateDemoRecords } from './app/demoData.ts'
 import { ErrorBoundary } from './app/ErrorBoundary.tsx'
+import { SyncStatus } from './features/sync/SyncStatus.tsx'
+import { LocationPicker } from './features/sync/LocationPicker.tsx'
+import { useSync } from './features/sync/useSync.ts'
 
 const DEMO_MODE_KEY = 'ai-chocolation:demo-mode'
 
@@ -22,6 +25,10 @@ export default function App() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [demoOn, setDemoOn] = useState(loadDemoOn)
   const demoRecords = useMemo(() => (demoOn ? generateDemoRecords() : undefined), [demoOn])
+  // Sync runs off the same counter that already remounts Records and Stats after
+  // a save, so a new box is offered to the server the moment it is stored — and
+  // never before it is stored. Nothing on the counter waits for this.
+  const sync = useSync(refreshKey)
 
   function toggleDemo() {
     const next = !demoOn
@@ -41,7 +48,10 @@ export default function App() {
           <div className="brand-mark" aria-hidden="true"><span>✦</span></div>
           <div><p className="eyebrow">Cocoa Dolce · Counter tools</p><h1>AI Chocolation</h1></div>
         </div>
-        <label className="demo-toggle"><input type="checkbox" checked={demoOn} onChange={toggleDemo} /><span className="toggle-track" aria-hidden="true" /><span>Demo mode</span></label>
+        <div className="header-tools">
+          <SyncStatus state={sync} />
+          <label className="demo-toggle"><input type="checkbox" checked={demoOn} onChange={toggleDemo} /><span className="toggle-track" aria-hidden="true" /><span>Demo mode</span></label>
+        </div>
       </header>
       <nav className="app-nav" aria-label="Screens">
         <button type="button" aria-label="Box" aria-current={tab === 'box'} onClick={() => setTab('box')}><span aria-hidden="true">▦</span> Box</button>
@@ -56,7 +66,10 @@ export default function App() {
         {tab === 'records' && <RecordsScreen key={refreshKey} demoRecords={demoRecords} onChange={() => setRefreshKey((k) => k + 1)} />}
         {tab === 'stats' && <StatsScreen key={refreshKey} demoRecords={demoRecords} />}
       </ErrorBoundary>
-      <footer className="app-footer"><span>Made for the sweet spot.</span><span>Offline-ready · v1.0</span></footer>
+      <footer className="app-footer">
+        <LocationPicker onChange={() => sync.syncNow()} />
+        <div className="app-footer-meta"><span>Made for the sweet spot.</span><span>Offline-ready · v1.0</span></div>
+      </footer>
     </main>
   )
 }

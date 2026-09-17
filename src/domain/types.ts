@@ -58,6 +58,12 @@ export interface BoxRecord {
   method: 'tap' | 'camera-assisted'
   /** True for generated sample data shown in demo mode. */
   demo: boolean
+  /** Which shop this tablet stands in. Set once per device on the Records
+   * screen; absent on records saved before a location was chosen, and on any
+   * tablet where nobody set one. The dashboard hides its location filter
+   * entirely when no record carries this, rather than offering a filter that
+   * matches nothing. */
+  locationId?: string
 }
 
 /** The display case as a grid, row by row. `null` is an empty plate. */

@@ -4,6 +4,7 @@
 
 import type { BoxRecord, BoxSession, BoxSize, FlavorId, PieceSource } from '../../domain/types.ts'
 import { newId } from '../../app/id.ts'
+import { loadLocationId } from '../sync/location.ts'
 
 export function startSession(size: BoxSize, now = Date.now()): BoxSession {
   return { id: newId(), size, pieces: [], startedAt: now, undoCount: 0 }
@@ -70,7 +71,14 @@ export function tally(session: BoxSession): FlavorTally[] {
 /** Turns a complete session into a saved record. Throws on an incomplete box: the
  * UI must gate the save button on isComplete() so this should never fire from a
  * real tap. */
-export function toRecord(session: BoxSession, now = Date.now()): BoxRecord {
+/** `locationId` defaults to whatever this tablet was set to on the Records
+ * screen. It is a parameter so tests can pin it, and so a caller that knows
+ * better can override it. */
+export function toRecord(
+  session: BoxSession,
+  now = Date.now(),
+  locationId: string | undefined = loadLocationId(),
+): BoxRecord {
   if (!isComplete(session)) {
     throw new Error(`Cannot save box ${session.id}: has ${session.pieces.length} of ${session.size} pieces`)
   }
@@ -87,5 +95,6 @@ export function toRecord(session: BoxSession, now = Date.now()): BoxRecord {
     undoCount: session.undoCount,
     method,
     demo: false,
+    ...(locationId ? { locationId } : {}),
   }
 }

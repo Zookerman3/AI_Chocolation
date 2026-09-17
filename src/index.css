@@ -35,3 +35,83 @@
 .pace-card { margin-bottom:16px; }
 .pace-empty { font:500 .72rem DM Mono,monospace; text-align:right; }
 .pace-note { margin:14px 0 0; font-size:.78rem; }
+
+/* --- Sync status and device location (Phase 3) -------------------------- */
+
+.header-tools {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.sync-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  /* 44px floor: this is a control on a tablet a standing person uses. */
+  min-height: 44px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  background: transparent;
+  font: 600 12px/1 inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sync-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.sync-status-ok { color: #2f7a4f; }
+.sync-status-waiting { color: #9a6a1b; }
+.sync-status-error { color: #a3352f; }
+
+.sync-status:hover { background: rgba(0, 0, 0, 0.04); }
+
+.location-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+}
+
+.location-picker label {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.location-picker select {
+  min-height: 44px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.location-picker p {
+  margin: 0;
+  flex: 1 1 260px;
+  min-width: 0;
+  opacity: 0.75;
+  line-height: 1.4;
+}
+
+.app-footer-meta {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  opacity: 0.75;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sync-status { transition: none; }
+}

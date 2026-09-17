@@ -1,0 +1,10 @@
+dataset
+docs
+.agent-logs
+.worktrees
+.claude
+.github
+node_modules
+# Tests in api/ would otherwise be deployed as endpoints.
+api/**/*.test.ts
+api/_lib/testing.ts

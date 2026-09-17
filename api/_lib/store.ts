@@ -12,7 +12,7 @@
 // very first push, before anyone has provisioned anything. `durable` is reported
 // on /api/health so nobody mistakes the fallback for real persistence.
 
-import type { BoxRecord } from './record.ts'
+import type { BoxRecord } from './record.js'
 
 export interface BoxQuery {
   from?: Date

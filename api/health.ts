@@ -4,9 +4,9 @@
 // claim a connection that is not there, and never claim durability the server
 // does not have.
 
-import { applyCors, fail, preflight } from './_lib/http.ts'
-import type { ApiRequest, ApiResponse } from './_lib/http.ts'
-import { getStore } from './_lib/store.ts'
+import { applyCors, fail, preflight } from './_lib/http.js'
+import type { ApiRequest, ApiResponse } from './_lib/http.js'
+import { getStore } from './_lib/store.js'
 
 export default async function handler(req: ApiRequest, res: ApiResponse): Promise<void> {
   if (preflight(req, res)) return

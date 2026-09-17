@@ -6,11 +6,11 @@
 
 import {
   applyCors, fail, param, parseBody, preflight, writeAllowed,
-} from './_lib/http.ts'
-import type { ApiRequest, ApiResponse } from './_lib/http.ts'
-import { validateRecord } from './_lib/record.ts'
-import type { BoxRecord } from './_lib/record.ts'
-import { getStore } from './_lib/store.ts'
+} from './_lib/http.js'
+import type { ApiRequest, ApiResponse } from './_lib/http.js'
+import { validateRecord } from './_lib/record.js'
+import type { BoxRecord } from './_lib/record.js'
+import { getStore } from './_lib/store.js'
 
 const MAX_BATCH = 500
 const DEFAULT_LIMIT = 5000

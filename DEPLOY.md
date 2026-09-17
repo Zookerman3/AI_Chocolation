@@ -1,5 +1,24 @@
 # Deploy
 
+**Current state (Sep 17):** both projects are live, deployed with the Vercel CLI from Ange1G's
+Vercel account (`angelgonzalez0316-8491`), not through a GitHub import — Vercel's GitHub app
+isn't installed on Zookerman3, so the import in step 1 fails with "you have access to the
+repository if it's private". Until that's done, redeploy by hand from a synced checkout:
+
+```bash
+vercel --prod          # in AI_Chocolation → https://ai-chocolation.vercel.app
+vercel --prod          # in Chocolate_Dashboard → https://case-notes-delta.vercel.app
+```
+
+Two things the first deploy taught us, both already in the repo:
+
+- Files under `api/` must import each other with `.js` specifiers, not `.ts`. Vercel compiles the
+  functions with plain `tsc`, which keeps the specifier as written; with `.ts` every route fails with
+  `FUNCTION_INVOCATION_FAILED`. The type-only warnings it prints (`process` not found, `why`
+  narrowing) are harmless — it doesn't read `tsconfig.api.json`.
+- `.vercelignore` keeps `api/**/*.test.ts` and `api/_lib/testing.ts` out of the upload; otherwise
+  Vercel deploys the test files as `/api/api.test` and `/api/e2e.test` endpoints.
+
 Two Vercel projects, one repo each.
 
 | Project | Repo | What it serves |

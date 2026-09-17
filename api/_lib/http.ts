@@ -1,5 +1,9 @@
 // Minimal structural types for a Vercel Node serverless function.
 //
+// Files under api/ import each other with `.js` specifiers, unlike src/, because
+// Vercel compiles these to JavaScript with plain tsc, which keeps the specifier
+// as written: a `.ts` one 404s at runtime and every route fails to invoke.
+//
 // Deliberately NOT importing @vercel/node: that would add a dependency to every
 // teammate's install for two interfaces. Vercel passes Node's IncomingMessage /
 // ServerResponse with `body`, `query` and `json()` bolted on, and structural

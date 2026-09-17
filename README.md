@@ -8,7 +8,8 @@ Our Build Track entry for the **Chocolathon** (WSU AI Club × Cocoa Dolce × Lov
 > taps **Use camera**: a photo of the open box is read slot by slot on the tablet itself (no server,
 > no API key), the pieces it's sure of are added, and the rest come back as one-tap confirms.
 >
-> **Live link:** _TBD (Vercel)_ · **What to click first:** Turn on "Demo mode," then open the
+> **Live link:** https://ai-chocolation.vercel.app (tablet + box API) · office dashboard:
+> https://case-notes-delta.vercel.app · **What to click first:** Turn on "Demo mode," then open the
 > Records and Stats tabs to see sample data without needing real chocolates on hand. With a real
 > 16 or 30 box: pick its size, tap "Use camera", get the box roughly inside the outline, Capture.
 
@@ -104,7 +105,10 @@ pillow-heif numpy`):
 - Settings → Collaborators: add teammates (write access)
 - Settings → General → Pull Requests: allow squash merging, automatically delete head branches
 - `main` is not protected. That needs GitHub Pro on a private repo. Nothing stops a direct push, so follow CLAUDE.md.
-- Vercel: import the repo. Every PR gets a preview link, and `main` is the live link.
+- Vercel: both projects (`ai-chocolation`, `case-notes`) are deployed from Ange1G's Vercel account
+  with the CLI (`vercel --prod` in each repo folder), so a push does **not** redeploy on its own —
+  see DEPLOY.md. Importing the repos in Vercel's dashboard (owner-only, needs the GitHub app on
+  Zookerman3) would add PR preview links and auto-deploys of `main`.
 
 ## Known limits
 
@@ -189,13 +193,21 @@ Keep this honest and current. The judges score it.
   server on a phone, or a denied permission) it falls back to the OS camera and the same grid-finder
   reads the photo. First open downloads about 20 MB (the WebAssembly runtime is 14 MB of it, 3.7 MB
   compressed); after that everything is cached offline.
-- **Local device storage only.** Records live in the browser's localStorage, per device, with no
-  backend, no login, and no sync across tablets. Losing the tab or clearing site data loses the data.
+- **The device is the source of truth; the server is a copy.** Records live in the browser's
+  localStorage, per device, with no login. Each saved box is also posted to `/api/boxes` on the same
+  origin (queued when offline, retried on reconnect), which is what the office dashboard reads.
+  Clearing site data on a tablet loses whatever hadn't synced yet.
+- **The server copy lives in one free-tier Redis.** The API stores boxes in Upstash Redis, connected
+  through Angel's Vercel account (`/api/health` reports `store: redis, durable: true`). Free tier is
+  plenty for a shop's volume, but there is no backup and no delete endpoint: removing a bad record
+  means an `HDEL` against the database (DEPLOY.md). If the Vercel env vars are ever missing at
+  deploy time the API silently falls back to memory — `/api/health` and the dashboard's state chip
+  say so, which is the thing to check before a demo.
 - **The in-app timer isn't the full "measured, not guessed" story.** It correctly measures real
   elapsed time per box in the app, but the seconds-per-box number for the submission comes from
   timing real people assembling real boxes by hand (planned for Thursday), not just this timer.
-- **Not deployed yet.** No live Vercel link. That's a one-time repo-owner action (see "Repo settings"
-  above); until then, this only runs locally (`npm run dev` or `npm run build && npm run preview`).
+- **Deploys are manual.** The live link is updated by someone running `vercel --prod` from a synced
+  checkout, not by merging to `main`. If `main` moves and nobody redeploys, the link is stale.
 - **Offline works after the first load, not before it.** The app is installable (Add to Home Screen)
   and precaches itself plus every flavor photo a device has viewed, via a service worker
   (`vite-plugin-pwa`). That covers the real risk — event wifi dropping mid-shift — but a device that

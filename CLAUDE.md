@@ -130,12 +130,19 @@ then only change files in your own area unless the issue says otherwise.
 | `src/features/records/` | Saved box records, CSV/JSON export, records screen | A1gUs3 |
 | `src/features/stats/` | Most-picked flavors and combinations (stretch) | A1gUs3 |
 | `src/features/camera/` | Phase 2 camera assist | A1gUs3 |
+| `src/features/sync/` | Outbox that posts saved boxes to the API, sync chip, location picker | Zookerman3 |
+| `api/` | The box API (`/api/boxes`, `/api/health`), deployed with the app as Vercel functions | Zookerman3 |
+| `DEPLOY.md`, `.vercelignore`, `vercel.json` | Deploying both apps; Ange1G runs the deploys | Ange1G |
 | `src/domain/` | Shared types. Changes need a PR that explains why | everyone, carefully |
 
 Shared files (`package.json`, `src/App.tsx`, `CLAUDE.md`, `src/domain/types.ts`) are edited by
 humans, or by agents only when the issue explicitly names them.
 
-Data is stored on the device (localStorage) for now. There is no backend.
+Data is stored on the device (localStorage); that copy is the source of truth. Each saved box is
+also posted to `/api/boxes` (Vercel serverless functions in `api/`, same origin), which the office
+dashboard (Chocolate_Dashboard) reads. Live: https://ai-chocolation.vercel.app and
+https://case-notes-delta.vercel.app — the store is Upstash Redis (durable); see DEPLOY.md for
+how to redeploy and how to remove a record.
 
 ## Code conventions
 

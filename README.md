@@ -10,7 +10,8 @@ Our Build Track entry for the **Chocolathon** (WSU AI Club × Cocoa Dolce × Lov
 >
 > **Live link:** https://ai-chocolation.vercel.app (tablet + box API) · office dashboard:
 > https://case-notes-delta.vercel.app · **What to click first:** Turn on "Demo mode," then open the
-> Records and Stats tabs to see sample data without needing real chocolates on hand. With a real
+> Records and Stats tabs to see sample data without needing real chocolates on hand. On a real
+> counter, set **This tablet is at** in the footer first so every box carries its shop. With a real
 > 16 or 30 box: pick its size, tap "Use camera", get the box roughly inside the outline, Capture.
 
 Stack: React 19 + Vite + TypeScript, Vitest, ESLint; `onnxruntime-web` runs the camera's recogniser
@@ -114,13 +115,11 @@ pillow-heif numpy`):
 
 Keep this honest and current. The judges score it.
 
-- **Narrow/portrait tablet: progress and Save are below the fold on a fresh box.**
-  The redesigned layout (Manus AI) collapses to one column under 900px and its
-  `box-actions` bar is sticky-to-bottom once reached, but the "Your Box" panel
-  still renders after the full flavor grid in DOM order — on a brand-new box, the
-  cashier has to scroll past the whole grid once before seeing the running count
-  or the Save button at all. Fine at desktop/landscape width; worth fixing before
-  this runs on a real portrait tablet at the counter.
+- **On a phone-width screen the per-flavor tally sits below the grid.** Under 900px the layout is
+  one column: the running count is pinned to the top of the screen and the action bar (Use camera,
+  Undo, Cancel, Save) to the bottom, so both are always in view — but the "Your box" list with its
+  per-flavor +/− corrections comes after the grid, so fixing one specific flavor means a scroll.
+  At tablet-landscape width the tally is a side column and none of this applies.
 
 - **Case layout isn't the real one yet.** We have no way to know Cocoa Dolce's actual physical
   display case without asking their staff, which the rules don't allow. The tile grid ships with a
@@ -218,8 +217,9 @@ Keep this honest and current. The judges score it.
 - **A rush at the counter.** One tap per piece, no confirm dialogs, so it doesn't slow anyone down —
   but that also means there's no friction to catch a mistake in the moment. The backstops: Save stays
   disabled until the count exactly matches the box size (and the count is large and always visible),
-  and a live per-flavor tally sits above the grid so a wrong count is visible before the box is called
-  done, not just at the very end.
+  and a live per-flavor tally sits beside the grid (below it on a narrow screen, with the running
+  count pinned at the top) so a wrong count is visible before the box is called done, not just at the
+  very end.
 - **A mis-tap.** Fixed: each row in the running tally has its own +/− buttons, so a cashier can correct
   one specific flavor without touching the rest of the box or replaying every tap after it. Sequential
   "Undo" (last tap only) is still there too, for the common case of catching a mistake immediately.

@@ -1,4 +1,6 @@
-// Records are stored on the device (localStorage). There is no backend for Phase 1.
+// Records are stored on the device (localStorage); that copy is the source of truth.
+// src/features/sync/ posts each saved box to the API (api/boxes.ts) and never
+// writes back here.
 //
 // Demo mode (see src/app/demoData.ts) never touches this storage: it's generated fresh
 // and passed down as a display-only override in App.tsx, so a real box saved while

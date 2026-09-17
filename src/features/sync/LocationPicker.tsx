@@ -1,4 +1,4 @@
-// Set once, when the tablet is put on the counter. Lives on the Records screen
+// Set once, when the tablet is put on the counter. Lives in the footer (App.tsx)
 // because it is a setup task, not something a cashier touches mid-rush.
 
 import { useState } from 'react'

@@ -64,6 +64,10 @@ export interface BoxRecord {
    * entirely when no record carries this, rather than offering a filter that
    * matches nothing. */
   locationId?: string
+  /** Stamped by the API (api/_lib/record.ts) when it first accepted the record.
+   * Never set on the device; present on records read back from /api/boxes, so
+   * the dashboard can tell "new to the server" from "old box synced late". */
+  receivedAt?: string
 }
 
 /** The display case as a grid, row by row. `null` is an empty plate. */

@@ -14,17 +14,17 @@ what-to-click-first note.
 |---|---|
 | Camera assist (on-device nearest-neighbour matcher) | **Merged to `main`** (squash of `Zookerman3/camera-assist`) |
 | Orange + Strawberry flavors | Merged (`src/data/flavors.local.json`) |
-| Training dataset (1,920 labelled crops) | Built and verified; lives on Stephen's Mac, **not in the repo** |
+| Training dataset (1,920 labelled crops) | Built and verified; committed under `dataset/` (#15) |
 | Crash-proofing patch (error boundary, seconds-per-box stat) | Applied and merged Wed afternoon (`Zookerman3/crash-proofing`) |
 | MobileNetV2 upgrade (fixes lighting/camera robustness) | **Ported** on `Zookerman3/mobilenet` (Wed afternoon): int8 model at 160 px, fused gallery, blur guard, colour fallback; see README Known limits for the measured table |
 | Grid-finder (box only roughly on the outline; tilt OK) | **Ported** on `Zookerman3/grid-finder` (Wed evening): `gridFinder.ts`, measured in README |
-| Vercel deploy + iPad test over HTTPS | Not done |
+| Vercel deploy + iPad test over HTTPS | Deployed Sep 17: https://ai-chocolation.vercel.app (redeploy steps in DEPLOY.md). iPad capture test over HTTPS still to do |
 | Thursday timing (10+ real boxes per method) | Not done |
 | README robustness table | In README Known limits, re-measured through the shipped code |
 
-Everything above is merged to `main` as of Wed evening; feature branches were squash-merged on
-GitHub and deleted. The repo root on Stephen's Mac also holds an **untracked** `dataset/` folder and
-a stray `dataset_1.zip` (29 MB). Never `git add -A`; add paths by name.
+Everything above is merged to `main`; feature branches were squash-merged on GitHub and deleted.
+`dataset/` is tracked now (#15) and there is no stray `dataset_1.zip` in the repo, but the rule
+stands: never `git add -A`; add paths by name (`.env.local` and `.vercel/` are git-ignored, not absent).
 
 ## 2. What shipped: how the camera assist works (as of the `grid-finder` merge)
 
@@ -155,7 +155,7 @@ Result: **1,920 verified crops** at 226×226, 27+2 flavors + `empty`, named
 file), `qa-flavor-sheets.zip`, `qa-grids-sets-1-2.zip`, `qa-grids-sets-3-4.zip`. Consider a GitHub
 Release for the zips rather than committing 28 MB of JPEGs.
 
-## 4. What was measured (colour/texture matcher, as merged)
+## 4. What was measured (colour/texture matcher — now the fallback; the shipped fused numbers are in §5)
 
 Leave-one-session-out on the 1,920 crops (`scripts/build-gallery.ts` prints this): **92.2 %
 top-1, 96.8 % top-3** (checkpoint was 80 / 95). Through the tablet's whole-frame path on session 4
@@ -193,7 +193,7 @@ Recipe, verified against the saved features:
 - Fusion: score = 0.7 · cos(colour) + 0.3 · cos(MobileNet), i.e. the concatenation of the two
   unit vectors scaled by √0.7 and √0.3.
 
-| Condition | colour only (shipped) | MobileNetV2 + colour (0.7/0.3) |
+| Condition | colour only (fallback) | MobileNetV2 + colour (0.7/0.3, shipped) |
 |---|---|---|
 | held-out top-1 (leave-one-session-out) | 92.2 % | **98.4 %** (MobileNet alone 97.9 %) |
 | brightness ×0.6 | 37 % | 100 % |
@@ -298,11 +298,12 @@ dependency below `readCells`; feed jpeg-js RGBA), and score against `training_la
    of the 30-box (20°/35°/50°) through `scripts/crop_cells.py` + the recogniser, to confirm the
    synthetic tilt numbers hold for real piece sides.
 2. ~~Apply `crash-proofing.patch`~~ Done, merged.
-3. Deploy to Vercel — the live camera preview needs **HTTPS** (`getUserMedia`), so the iPad test
-   only works on the deployed link.
+3. ~~Deploy to Vercel~~ Done Sep 17: https://ai-chocolation.vercel.app, redeploy steps in DEPLOY.md.
+   The live camera preview needs **HTTPS** (`getUserMedia`), so the iPad test in item 4 runs on that link.
 4. iPad capture test on a real 16 and 30 box; confirm the 6 and 10 inserts are 2×3 / 2×5 (one
    number in `grid.ts` if not).
 5. Thursday: time 10+ boxes per method (tap vs camera), seconds per box and corrections; those
    numbers go in the video and README.
 6. Video ≤ 3 min + what-to-click-first note. Demo mode exists for judges without chocolates.
-7. Housekeeping: delete the stray `dataset_1.zip` from the repo root before anyone commits it.
+7. ~~Housekeeping: delete the stray `dataset_1.zip`~~ Moot: it was never committed, and the dataset
+   lives in `dataset/` (#15).

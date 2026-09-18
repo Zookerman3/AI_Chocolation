@@ -41,7 +41,7 @@ export function BoxScreen({ onSaved }: BoxScreenProps) {
 
   if (!session) return <section aria-labelledby="pick-size" className="welcome-panel"><div className="welcome-copy"><p className="eyebrow">New order</p><h2 id="pick-size" aria-label="Pick a box size">Build a beautiful box.</h2><p>Choose a size to start recording the flavors your customer picked.</p></div><div className="size-picker">{BOX_SIZES.map((size) => <button key={size} type="button" aria-label={String(size)} onClick={() => pickSize(size)}><strong>{size}</strong><span>pieces</span></button>)}</div><div className="entry-footer"><button type="button" aria-label="Rearrange case" className="button button-quiet" onClick={toggleRearrange}>⚙ Rearrange case</button>{savedFlash && <p role="status" className="success-note">✓ {savedFlash}</p>}</div></section>
 
-  if (showCamera) return <CameraScreen session={session} onSessionChange={setSession} onManual={() => setShowCamera(false)} />
+  if (showCamera) return <CameraScreen session={session} onSessionChange={setSession} onManual={() => setShowCamera(false)} onComplete={() => setShowCamera(false)} />
 
   const elapsedSeconds = ((now - session.startedAt) / 1000).toFixed(1)
   const complete = isComplete(session)

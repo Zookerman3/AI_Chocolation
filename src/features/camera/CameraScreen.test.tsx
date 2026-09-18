@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { StrictMode, useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CameraScreen } from './CameraScreen.tsx'
-import { startSession } from '../box/boxSession.ts'
+import { addPiece, startSession } from '../box/boxSession.ts'
 import { FLAVORS } from '../../data/flavors.ts'
 
 const [a, b] = FLAVORS
@@ -140,6 +140,33 @@ describe('CameraScreen', () => {
     uploadPhoto()
     await waitFor(() => expect(onComplete).toHaveBeenCalledOnce())
     expect(current.pieces).toHaveLength(6)
+  })
+
+  it('hands over when confirming a review row is what fills the box', async () => {
+    let current = startSession(6, 1000)
+    for (let i = 0; i < 5; i++) current = addPiece(current, a.id)
+    detectMock.mockResolvedValue([
+      { flavorId: b.id, confidence: 0.4, box: { x: 0, y: 0, width: 0.1, height: 0.1 }, rawClass: b.id, cell: { row: 1, col: 6 } },
+    ])
+    const onComplete = vi.fn()
+    render(
+      <CameraScreen
+        session={current}
+        onSessionChange={(s) => {
+          current = s
+        }}
+        onManual={vi.fn()}
+        onComplete={onComplete}
+      />,
+    )
+
+    uploadPhoto()
+    await waitFor(() => expect(screen.getByText('Please confirm')).toBeInTheDocument())
+    expect(onComplete).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+    expect(current.pieces).toHaveLength(6)
+    expect(onComplete).toHaveBeenCalledOnce()
   })
 
   it('stays on the camera while the box is still short, with the result above the capture card', async () => {

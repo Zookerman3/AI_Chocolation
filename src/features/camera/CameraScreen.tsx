@@ -194,11 +194,16 @@ export function CameraScreen({ session, onSessionChange, onManual, onComplete }:
   }
 
   function resolvePending(detection: Detection, chosenFlavorId: string | null) {
-    if (chosenFlavorId) {
-      onSessionChange(confirmDetection(session, detection, chosenFlavorId))
+    setPending((list) => list.filter((d) => d !== detection))
+    if (!chosenFlavorId) return
+    const next = confirmDetection(session, detection, chosenFlavorId)
+    if (next !== session) {
+      onSessionChange(next)
       setAddedCount((n) => n + 1)
     }
-    setPending((list) => list.filter((d) => d !== detection))
+    // The confirm that fills the box is a finished box too — same hand-over as a
+    // photo that fills it.
+    if (isComplete(next)) onComplete?.()
   }
 
   if (!grid) {

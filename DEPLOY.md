@@ -207,7 +207,7 @@ Do this once on the real deployment before you hand the links to anyone.
 
 - [ ] `curl -s "$API/api/health"` returns `"ok": true` and `"durable": true`.
 - [ ] The tablet URL opens on a phone or tablet with no login and no install prompt.
-- [ ] On the tablet: save a real box (demo mode **off** — demo records never sync).
+- [ ] On the tablet: save a real box.
 - [ ] The header's sync chip settles on "Synced", not "N boxes waiting" or "Sync failed".
 - [ ] `curl -s "$API/api/boxes?limit=5"` shows that box, with a `receivedAt` on it.
 - [ ] The dashboard, in live mode, shows the same box on the Boxes screen.
@@ -228,7 +228,7 @@ Do this once on the real deployment before you hand the links to anyone.
 | `/api/health` says `"durable": false` | No `KV_REST_API_URL`/`KV_REST_API_TOKEN` in this project's environment, or they were added after the current deployment was built. | Step 2. If the integration is already connected, **redeploy** — env vars are read at deploy time. Check the variables are scoped to Production, not only Preview. |
 | Tablet sync chip reads "Sync failed"; POSTs return 401 | `SYNC_TOKEN` is set on the project but `VITE_SYNC_TOKEN` is unset or does not match. | Set both to the same value and redeploy the tablet project. Nothing is lost meanwhile: the boxes stay in the outbox and go up on the next successful pass. |
 | Dashboard live mode is empty but the API has records | Either the date filter window excludes them (`completedAt` is what `from`/`to` filter on, not `receivedAt`), or a location filter is set and the records carry no `locationId`. | Widen the window; set location to "all". Compare against raw `curl "$API/api/boxes?limit=5"`. |
-| Dashboard live mode is empty and the API is empty | The tablet posted demo records — those never sync — or the store went through a cold start while `durable: false`. | Save a box with demo mode off. Check `/api/health` for `durable`. |
+| Dashboard live mode is empty and the API is empty | No tablet has saved a box yet, or the store went through a cold start while `durable: false`. | Save a box on a tablet. Check `/api/health` for `durable`. |
 | Tablet shows an old build after a deploy | The service worker precached the previous build (`vite-plugin-pwa`). | On the tablet: close every tab of the app and reopen, or pull-to-refresh twice. If it persists: Settings → site settings → clear site data for that origin, then reload. **Note this wipes localStorage**, which means the acknowledged-ids set goes too, so the tablet re-sends everything it still holds. That is harmless — writes are idempotent on record id — but the chip will show a queue for one pass. |
 | `curl` POST returns 422 with a `rejected` list | A record failed validation. The `why` on each entry names the reason. | Read it. The common one is piece counts not summing to `size`. |
 | `curl` POST returns 413 | More than 500 records in one batch. | The tablet never does this (it batches 100). Split the request. |

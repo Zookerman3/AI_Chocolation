@@ -35,7 +35,8 @@ Source: https://www.wsuaiclub.com/hq#prompts (Build track, released Sep 13 2026,
 A tablet screen whose flavor tiles are arranged exactly like the physical display case, so the
 cashier taps where they just grabbed. Pick box size → tap a tile per piece → count shows `7 / 16` →
 undo → save only when the count matches → one record per box → CSV/JSON export → timer on every box.
-Plus a demo mode with sample boxes (judges open the link without chocolates) and a stats view.
+Plus a stats view. (The tablet's demo-mode toggle and the dashboard's sample data were both removed
+on Sep 18: every screen shows real saved boxes only, so save some before judging.)
 
 **Phase 2 (Wed–Fri): camera assist — checkpoint passed, on-device, robust.**
 Per-cell crop and match: the cashier gets the open box roughly inside an outline on screen;
@@ -123,7 +124,7 @@ then only change files in your own area unless the issue says otherwise.
 
 | Area (folder) | What lives there | Owner |
 |---|---|---|
-| `src/app/` | App shell, navigation, demo mode | A1gUs3 |
+| `src/app/` | App shell, navigation, error boundary | A1gUs3 |
 | `src/data/` + `scripts/fetch-flavors.mjs` | Flavor catalog from the public store feed | A1gUs3 |
 | `src/features/box/` | Box session logic and the box screen | A1gUs3 |
 | `src/features/layout/` | Flavor tile grid and case layout editor | A1gUs3 |

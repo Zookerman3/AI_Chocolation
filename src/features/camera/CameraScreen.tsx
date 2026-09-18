@@ -7,6 +7,7 @@ import type { LoadProgress } from './recognizer.ts'
 import { FLAVORS, flavorOrPlaceholder } from '../../data/flavors.ts'
 import { cells, gridFor, outlineRect } from './grid.ts'
 import type { GridSpec, Rect } from './grid.ts'
+import { isComplete } from '../box/boxSession.ts'
 
 interface CameraScreenProps {
   session: BoxSession
@@ -14,6 +15,9 @@ interface CameraScreenProps {
   /** Leaves the camera for the tile grid — same session, same pieces, just a
    * different way to add the rest. */
   onManual: () => void
+  /** A photo filled the box: nothing is left to do here, so the screen hands
+   * over to the tally, where Save is already enabled. */
+  onComplete?: () => void
 }
 
 type PreviewState = 'starting' | 'live' | 'unavailable'
@@ -113,7 +117,7 @@ function useCameraPreview(enabled: boolean) {
   return { videoRef, state, frame }
 }
 
-export function CameraScreen({ session, onSessionChange, onManual }: CameraScreenProps) {
+export function CameraScreen({ session, onSessionChange, onManual, onComplete }: CameraScreenProps) {
   const grid = gridFor(session.size)
   const [status, setStatus] = useState<'idle' | 'detecting' | 'error'>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -163,12 +167,13 @@ export function CameraScreen({ session, onSessionChange, onManual }: CameraScree
         setPending(result.needsReview)
         setOverflowed(result.overflowed)
         setStatus('idle')
+        if (isComplete(result.session)) onComplete?.()
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Could not read that photo.')
         setStatus('error')
       }
     },
-    [grid, session, onSessionChange],
+    [grid, session, onSessionChange, onComplete],
   )
 
   function capture() {
@@ -228,10 +233,63 @@ export function CameraScreen({ session, onSessionChange, onManual }: CameraScree
             Anything the camera isn't sure about comes back for one tap.
           </p>
         </div>
-        <button type="button" className="button button-dark" onClick={onManual}>
-          ▦ Pick manually
-        </button>
+        <div className="box-toolbar-actions">
+          {preview !== 'unavailable' && (
+            <button type="button" className="button button-accent" onClick={capture} disabled={!canCapture}>
+              {busy ? 'Reading…' : 'Capture'}
+            </button>
+          )}
+          <button type="button" className="button button-dark" onClick={onManual}>
+            ▦ Pick manually
+          </button>
+        </div>
       </div>
+
+      {/* What the last photo did, and anything left to confirm, sit above the
+          preview so the cashier never scrolls past the camera to find out. */}
+      {degraded && (
+        <p className="camera-banner">
+          <strong>Basic colour matching.</strong> The recognizer model didn't load on this device, so expect more
+          "please confirm" taps than usual. Reload once the connection is back.
+        </p>
+      )}
+      {detectorKind === 'stub' && (
+        <p className="camera-banner">
+          <strong>Demo camera flow.</strong> No model is configured yet, but the review flow is ready for when one is
+          connected.
+        </p>
+      )}
+      {status === 'error' && (
+        <p role="alert" className="camera-error">
+          {error}
+        </p>
+      )}
+      {status === 'idle' && addedCount > 0 && (
+        <p role="status" className="success-note">
+          Added {addedCount} piece{addedCount === 1 ? '' : 's'} from the photo.
+        </p>
+      )}
+      {overflowed.length > 0 && (
+        <p className="camera-banner">
+          {overflowed.length} more detected piece{overflowed.length === 1 ? '' : 's'} didn't fit — the box is already
+          full.
+        </p>
+      )}
+      {pending.length > 0 && (
+        <div className="camera-review">
+          <div>
+            <p className="eyebrow">Quick review</p>
+            <h3>
+              Please confirm <span>{pending.length}</span>
+            </h3>
+          </div>
+          <ul className="camera-pending">
+            {pending.map((detection, index) => (
+              <PendingRow key={index} detection={detection} onResolve={(id) => resolvePending(detection, id)} />
+            ))}
+          </ul>
+        </div>
+      )}
 
       {preview !== 'unavailable' && (
         <div className="camera-live">
@@ -247,9 +305,6 @@ export function CameraScreen({ session, onSessionChange, onManual }: CameraScree
             )}
           </div>
           <div className="camera-actions">
-            <button type="button" className="button button-accent" onClick={capture} disabled={!canCapture}>
-              {busy ? 'Reading…' : 'Capture'}
-            </button>
             <label className="button button-quiet camera-upload">
               <span>Use a photo instead</span>
               <input
@@ -292,50 +347,6 @@ export function CameraScreen({ session, onSessionChange, onManual }: CameraScree
               }}
             />
           </label>
-        </div>
-      )}
-
-      {degraded && (
-        <p className="camera-banner">
-          <strong>Basic colour matching.</strong> The recognizer model didn't load on this device, so expect more
-          "please confirm" taps than usual. Reload once the connection is back.
-        </p>
-      )}
-      {detectorKind === 'stub' && (
-        <p className="camera-banner">
-          <strong>Demo camera flow.</strong> No model is configured yet, but the review flow is ready for when one is
-          connected.
-        </p>
-      )}
-      {status === 'error' && (
-        <p role="alert" className="camera-error">
-          {error}
-        </p>
-      )}
-      {status === 'idle' && addedCount > 0 && (
-        <p role="status" className="success-note">
-          Added {addedCount} piece{addedCount === 1 ? '' : 's'} from the photo.
-        </p>
-      )}
-      {overflowed.length > 0 && (
-        <p className="camera-banner">
-          {overflowed.length} more detected piece{overflowed.length === 1 ? '' : 's'} didn't fit — the box is already
-          full.
-        </p>
-      )}
-      {pending.length > 0 && (
-        <div className="camera-review">
-          <div>
-            <p className="eyebrow">Quick review</p>
-            <h3>
-              Please confirm <span>{pending.length}</span>
-            </h3>
-          </div>
-          <ul className="camera-pending">
-            {pending.map((detection, index) => (
-              <PendingRow key={index} detection={detection} onResolve={(id) => resolvePending(detection, id)} />
-            ))}
-          </ul>
         </div>
       )}
     </section>

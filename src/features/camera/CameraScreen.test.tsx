@@ -95,6 +95,42 @@ describe('CameraScreen', () => {
     expect(onManual).toHaveBeenCalledOnce()
   })
 
+  it('hands over to the tally by itself once a photo has filled the box', async () => {
+    const piece = { flavorId: a.id, confidence: 0.95, box: { x: 0, y: 0, width: 0.1, height: 0.1 }, rawClass: a.id }
+    detectMock.mockResolvedValue(Array.from({ length: 6 }, () => ({ ...piece })))
+    const onComplete = vi.fn()
+    let current = startSession(6, 1000)
+    render(
+      <CameraScreen
+        session={current}
+        onSessionChange={(s) => {
+          current = s
+        }}
+        onManual={vi.fn()}
+        onComplete={onComplete}
+      />,
+    )
+
+    uploadPhoto()
+    await waitFor(() => expect(onComplete).toHaveBeenCalledOnce())
+    expect(current.pieces).toHaveLength(6)
+  })
+
+  it('stays on the camera while the box is still short, with the result above the capture card', async () => {
+    detectMock.mockResolvedValue([
+      { flavorId: a.id, confidence: 0.95, box: { x: 0, y: 0, width: 0.1, height: 0.1 }, rawClass: a.id },
+    ])
+    const onComplete = vi.fn()
+    render(<CameraScreen session={startSession(6, 1000)} onSessionChange={vi.fn()} onManual={vi.fn()} onComplete={onComplete} />)
+
+    uploadPhoto()
+    const note = await screen.findByText('Added 1 piece from the photo.')
+    expect(onComplete).not.toHaveBeenCalled()
+    // The note comes first in the document, so it is never below the fold.
+    const card = screen.getByText('Ready when you are')
+    expect(note.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
   // Two overlapping requests for the same lens is how the preview ends up dead
   // and the cashier opens the screen twice to get a picture. StrictMode mounts
   // every effect twice in dev, so without the shared stream this asks the camera

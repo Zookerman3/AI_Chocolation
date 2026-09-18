@@ -9,10 +9,11 @@ Our Build Track entry for the **Chocolathon** (WSU AI Club × Cocoa Dolce × Lov
 > no API key), the pieces it's sure of are added, and the rest come back as one-tap confirms.
 >
 > **Live link:** https://ai-chocolation.vercel.app (tablet + box API) · office dashboard:
-> https://case-notes-delta.vercel.app · **What to click first:** Turn on "Demo mode," then open the
-> Records and Stats tabs to see sample data without needing real chocolates on hand. On a real
-> counter, set **This tablet is at** in the footer first so every box carries its shop. With a real
-> 16 or 30 box: pick its size, tap "Use camera", get the box roughly inside the outline, Capture.
+> https://case-notes-delta.vercel.app · **What to click first:** Pick a box size, tap the tiles (or,
+> with a real 16 or 30 box, get it roughly inside the camera outline and tap Capture), then Save —
+> Records and Stats fill from what has been saved, and the office dashboard reads the same boxes
+> live. There is no sample data anywhere, so save a few boxes before showing it. On a real counter,
+> set **This tablet is at** in the footer first so every box carries its shop.
 
 Stack: React 19 + Vite + TypeScript, Vitest, ESLint; `onnxruntime-web` runs the camera's recogniser
 in WebAssembly on the device. There is no CI: `npm run check` on your own laptop is the gate before

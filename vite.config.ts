@@ -12,8 +12,8 @@ export default defineConfig({
         name: 'AI Chocolation',
         short_name: 'Chocolation',
         description: 'Capture what goes into every box, at the counter.',
-        theme_color: '#1d2030',
-        background_color: '#f7f6f9',
+        theme_color: '#9e8959',
+        background_color: '#ffffff',
         display: 'standalone',
         start_url: '/',
         icons: [

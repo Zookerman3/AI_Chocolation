@@ -45,8 +45,8 @@ export default function App() {
     <main className="shell">
       <header className="app-header">
         <div className="brand-lockup">
-          <div className="brand-mark" aria-hidden="true"><span>✦</span></div>
-          <div><p className="eyebrow">Cocoa Dolce · Counter tools</p><h1>AI Chocolation</h1></div>
+          <div className="brand-mark" aria-hidden="true"><span /></div>
+          <div><p className="eyebrow">Cocoa Dolce</p><h1>AI Chocolation</h1></div>
         </div>
         <div className="header-tools">
           <SyncStatus state={sync} />

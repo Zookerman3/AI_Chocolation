@@ -15,8 +15,9 @@ Our Build Track entry for the **Chocolathon** (WSU AI Club × Cocoa Dolce × Lov
 > 16 or 30 box: pick its size, tap "Use camera", get the box roughly inside the outline, Capture.
 
 Stack: React 19 + Vite + TypeScript, Vitest, ESLint; `onnxruntime-web` runs the camera's recogniser
-in WebAssembly on the device. There is no CI: `npm run check` on your own laptop is the gate before
-anything merges.
+in WebAssembly on the device. The look follows shop.cocoadolce.com (palette read from its theme CSS;
+Jost stands in for their licensed ITC Avant Garde Gothic) — tokens at the top of `src/index.css`.
+There is no CI: `npm run check` on your own laptop is the gate before anything merges.
 
 ---
 

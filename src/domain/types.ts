@@ -37,6 +37,10 @@ export interface Piece {
   addedAt: number
   /** Camera only: match confidence from 0 to 1. */
   confidence?: number
+  /** Camera only: the insert slot (1-based row and column) the piece was read
+   * from, so a second photo of the same box does not count it again. Never on
+   * a tapped piece, and never saved — tally() collapses it away. */
+  cell?: { row: number; col: number }
 }
 
 /** A box being assembled right now. */

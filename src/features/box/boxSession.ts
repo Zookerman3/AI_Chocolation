@@ -2,7 +2,7 @@
 // Every input method (tap, camera, ...) goes through addPiece, so the count check,
 // save, and export logic never need to know where a piece came from.
 
-import type { BoxRecord, BoxSession, BoxSize, FlavorId, PieceSource } from '../../domain/types.ts'
+import type { BoxRecord, BoxSession, BoxSize, FlavorId, Piece, PieceSource } from '../../domain/types.ts'
 import { newId } from '../../app/id.ts'
 import { loadLocationId } from '../sync/location.ts'
 
@@ -10,19 +10,33 @@ export function startSession(size: BoxSize, now = Date.now()): BoxSession {
   return { id: newId(), size, pieces: [], startedAt: now, undoCount: 0 }
 }
 
-/** Adds a piece. Ignored once the box is full, so a stray extra tap can't overfill it. */
+/** Adds a piece. Ignored once the box is full, so a stray extra tap can't overfill it.
+ * `cell` is the insert slot a camera piece was read from (see Piece). */
 export function addPiece(
   session: BoxSession,
   flavorId: FlavorId,
   source: PieceSource = 'tap',
   confidence?: number,
   now = Date.now(),
+  cell?: Piece['cell'],
 ): BoxSession {
   if (session.pieces.length >= session.size) return session
   return {
     ...session,
-    pieces: [...session.pieces, { flavorId, source, addedAt: now, ...(confidence !== undefined ? { confidence } : {}) }],
+    pieces: [
+      ...session.pieces,
+      { flavorId, source, addedAt: now, ...(confidence !== undefined ? { confidence } : {}), ...(cell ? { cell } : {}) },
+    ],
   }
+}
+
+/** The insert slots already holding a camera-read piece, as "row:col" keys. */
+export function filledCells(session: BoxSession): Set<string> {
+  return new Set(session.pieces.flatMap((p) => (p.cell ? [cellKey(p.cell)] : [])))
+}
+
+export function cellKey(cell: NonNullable<Piece['cell']>): string {
+  return `${cell.row}:${cell.col}`
 }
 
 export function undoLast(session: BoxSession): BoxSession {

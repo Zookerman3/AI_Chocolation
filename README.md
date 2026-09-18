@@ -189,7 +189,8 @@ Keep this honest and current. The judges score it.
   shows its side and the divider wall starts hiding it, and that is what still needs six real photos
   to confirm, and maybe one angled shoot to add to the gallery if it doesn't hold. Only inserts we've
   measured are supported: 4×4 (16) and 5×6 (30); 6 and 10 are assumed 2×3 / 2×5 and need checking
-  against real boxes; 50 stays tap-only. Where the live preview isn't available (an `http://` dev
+  against real boxes; the 50-piece box is no longer offered on the tablet at all (taken off the size
+  picker on Sep 18, since it has no measured insert). Where the live preview isn't available (an `http://` dev
   server on a phone, or a denied permission) it falls back to the OS camera and the same grid-finder
   reads the photo. First open downloads about 20 MB (the WebAssembly runtime is 14 MB of it, 3.7 MB
   compressed); after that everything is cached offline.
@@ -232,11 +233,13 @@ Keep this honest and current. The judges score it.
   catches a mismatched *count*, not a mismatched *flavor*. The new allergen badges and search box help
   a cashier double-check a specific flavor by name rather than relying on the photo alone, but don't
   eliminate this.
-- **A large box.** Works up to 50 pieces (tested). The running tally's `+` button lets a cashier add
-  repeats of a flavor already in the box without re-finding its tile in the grid, which cuts down the
-  search-and-tap cost for a big box — but it's still one count per tap, so a 50-piece box is
-  meaningfully slower than a 6-piece one, and each tap is still a chance to mis-tap. Exactly why the
-  50-piece box needs its own real timing pass on Thursday, not just the 6-piece one.
+- **A large box.** The picker goes up to 30 pieces (tested); the 50-piece box was taken off it on
+  Sep 18 (no measured insert, so no camera path), though a saved 50-piece record is still valid data.
+  The running tally's `+` button lets a cashier add repeats of a flavor already in the box without
+  re-finding its tile in the grid, which cuts down the search-and-tap cost for a big box — but it's
+  still one count per tap, so a 30-piece box is meaningfully slower than a 6-piece one, and each tap
+  is still a chance to mis-tap. Exactly why the 30-piece box needs its own real timing pass on
+  Thursday, not just the 6-piece one.
 - The overnight runner detects the Claude usage limit by matching the error text. If Claude changes
   that message, the runner will mark the issue `agent-failed` instead of requeueing it.
 - There is no CI and `main` is unprotected. If someone merges without running `npm run check`, `main` can

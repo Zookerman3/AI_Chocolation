@@ -21,6 +21,12 @@ export interface Flavor {
 export const BOX_SIZES = [6, 10, 16, 30, 50] as const
 export type BoxSize = (typeof BOX_SIZES)[number]
 
+/** The sizes the counter offers. 50 was taken off the picker on Sep 18 — it has
+ * no measured insert, so no camera path, and the team chose not to offer it at
+ * the counter. It stays in BOX_SIZES so records that already exist, the API's
+ * validation and the dashboard keep accepting it. */
+export const OFFERED_SIZES: readonly BoxSize[] = [6, 10, 16, 30]
+
 /** Every input method feeds the same box. The camera never bypasses the session. */
 export type PieceSource = 'tap' | 'camera'
 

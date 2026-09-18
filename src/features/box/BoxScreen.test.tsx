@@ -24,9 +24,9 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
-/** Picks a box size and lands on the tile grid: sizes with a measured insert
- * open the camera first, so this taps its "Pick manually" button; the
- * 50-piece box has no insert and goes straight to the tiles. */
+/** Picks a box size and lands on the tile grid: every offered size has a
+ * measured insert and opens the camera first, so this taps its "Pick manually"
+ * button (kept tolerant of a size that goes straight to the tiles). */
 function pickSizeManually(size: string) {
   fireEvent.click(screen.getByRole('button', { name: size }))
   const manual = screen.queryByRole('button', { name: /Pick manually/ })
@@ -70,11 +70,10 @@ describe('BoxScreen', () => {
     expect(screen.getByRole('heading', { name: '0 / 6' })).toBeInTheDocument()
   })
 
-  it('picking the 50-piece box (no measured insert) goes straight to the tiles', () => {
+  it('offers 6, 10, 16 and 30 — the 50-piece box is not on the picker', () => {
     render(<BoxScreen />)
-    fireEvent.click(screen.getByRole('button', { name: '50' }))
-    expect(screen.getByRole('heading', { name: '0 / 50' })).toBeInTheDocument()
-    expect(screen.queryByRole('heading', { name: 'Scan the box' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: '50' })).not.toBeInTheDocument()
+    expect(screen.getAllByRole('button', { name: /^(6|10|16|30)$/ })).toHaveLength(4)
   })
 
   it('has no flavor search bar', () => {
@@ -114,16 +113,16 @@ describe('BoxScreen', () => {
     expect(after.cells[1]).toBe(a.id)
   })
 
-  it('handles the largest box size (50 pieces, tapped one at a time)', () => {
+  it('handles the largest offered box (30 pieces, tapped one at a time)', () => {
     render(<BoxScreen />)
-    fireEvent.click(screen.getByRole('button', { name: '50' }))
+    pickSizeManually('30')
 
     const tile = screen.getByRole('button', { name: new RegExp(FLAVORS[0].name) })
-    for (let i = 0; i < 50; i++) fireEvent.click(tile)
-    expect(screen.getByRole('heading', { name: '50 / 50' })).toBeInTheDocument()
+    for (let i = 0; i < 30; i++) fireEvent.click(tile)
+    expect(screen.getByRole('heading', { name: '30 / 30' })).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Save box' }))
-    expect(listRecords()[0].pieces).toEqual([{ flavorId: FLAVORS[0].id, count: 50 }])
+    expect(listRecords()[0].pieces).toEqual([{ flavorId: FLAVORS[0].id, count: 30 }])
   })
 
   it('asks for confirmation before discarding a box with pieces already tapped', () => {

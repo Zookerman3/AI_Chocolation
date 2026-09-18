@@ -73,7 +73,7 @@ Shared types live in [src/domain/types.ts](src/domain/types.ts). Change them onl
 
 ### Facts to respect
 
-- 27 bonbon flavors at $3.35 each, some seasonal (25 in the public feed plus Orange and Strawberry, sold in-store only — see `src/data/flavors.local.json`). Box sizes: 6, 10, 16, 30, 50 pieces.
+- 27 bonbon flavors at $3.35 each, some seasonal (25 in the public feed plus Orange and Strawberry, sold in-store only — see `src/data/flavors.local.json`). Box sizes: 6, 10, 16, 30, 50 pieces — the tablet offers 6–30 (`OFFERED_SIZES`); 50 was taken off the picker on Sep 18 but stays in the record contract.
   Box price depends only on size, never on flavor.
 - The store's product data has **mislabeled handles**: `amaretto-copy` is Confetti Cake and
   `confetti-cake-copy` is Tea & Honey. Always identify flavors by product **title**, never by handle.

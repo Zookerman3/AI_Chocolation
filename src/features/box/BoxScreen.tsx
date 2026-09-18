@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { BoxSession, BoxSize } from '../../domain/types.ts'
-import { BOX_SIZES } from '../../domain/types.ts'
+import { OFFERED_SIZES } from '../../domain/types.ts'
 import { addPiece, isComplete, removeOne, startSession, tally, toRecord, undoLast } from './boxSession.ts'
 import { FlavorGrid } from '../layout/FlavorGrid.tsx'
 import { defaultLayout, loadLayout, saveLayout, swapCells } from '../layout/caseLayout.ts'
@@ -27,8 +27,8 @@ export function BoxScreen({ onSaved }: BoxScreenProps) {
   }, [session])
 
   // Straight into the camera for a size we've measured an insert for — that's the
-  // fast path at the counter. A size with no known insert (the 50-piece box) has
-  // no camera to go to, so it lands on the tile grid instead.
+  // fast path at the counter. A size with no known insert would land on the tile
+  // grid instead; every size the picker offers has one today.
   function pickSize(size: BoxSize) { setSession(startSession(size)); setSavedFlash(null); setShowCamera(gridFor(size) !== null) }
   function tapCell(index: number) { const flavorId = layout.cells[index]; if (!flavorId || !session || isComplete(session)) return; setSession(addPiece(session, flavorId)) }
   function tapRearrangeCell(index: number) { if (swapFrom === null) { setSwapFrom(index); return }; const next = swapCells(layout, swapFrom, index); setLayout(next); saveLayout(next); setSwapFrom(null) }
@@ -39,7 +39,7 @@ export function BoxScreen({ onSaved }: BoxScreenProps) {
 
   if (rearranging) return <section aria-labelledby="rearrange-heading" className="panel"><div className="box-toolbar"><div><p className="eyebrow">Case setup</p><h2 id="rearrange-heading">{swapFrom === null ? 'Arrange your case' : 'Choose the swap tile'}</h2><p className="helper-text">{swapFrom === null ? 'Tap a tile, then tap where it should go.' : 'Tap another tile to exchange their places.'}</p></div><div className="box-toolbar-actions"><button type="button" className="button button-quiet" onClick={resetLayout}>Reset to default</button><button type="button" className="button button-dark" onClick={toggleRearrange}>Done</button></div></div><FlavorGrid layout={layout} onTapCell={tapRearrangeCell} selectedIndex={swapFrom} /></section>
 
-  if (!session) return <section aria-labelledby="pick-size" className="welcome-panel"><div className="welcome-copy"><p className="eyebrow">New order</p><h2 id="pick-size" aria-label="Pick a box size">Build a beautiful box.</h2><p>Choose a size to start recording the flavors your customer picked.</p></div><div className="size-picker">{BOX_SIZES.map((size) => <button key={size} type="button" aria-label={String(size)} onClick={() => pickSize(size)}><strong>{size}</strong><span>pieces</span></button>)}</div><div className="entry-footer"><button type="button" aria-label="Rearrange case" className="button button-quiet" onClick={toggleRearrange}>⚙ Rearrange case</button>{savedFlash && <p role="status" className="success-note">✓ {savedFlash}</p>}</div></section>
+  if (!session) return <section aria-labelledby="pick-size" className="welcome-panel"><div className="welcome-copy"><p className="eyebrow">New order</p><h2 id="pick-size" aria-label="Pick a box size">Build a beautiful box.</h2><p>Choose a size to start recording the flavors your customer picked.</p></div><div className="size-picker">{OFFERED_SIZES.map((size) => <button key={size} type="button" aria-label={String(size)} onClick={() => pickSize(size)}><strong>{size}</strong><span>pieces</span></button>)}</div><div className="entry-footer"><button type="button" aria-label="Rearrange case" className="button button-quiet" onClick={toggleRearrange}>⚙ Rearrange case</button>{savedFlash && <p role="status" className="success-note">✓ {savedFlash}</p>}</div></section>
 
   if (showCamera) return <CameraScreen session={session} onSessionChange={setSession} onManual={() => setShowCamera(false)} onComplete={() => setShowCamera(false)} />
 

@@ -61,6 +61,25 @@ describe('BoxScreen', () => {
     expect(screen.getByText(/Saved 6-piece box in/)).toBeInTheDocument()
   })
 
+  it('once the box is full, the tile grid gives way to the list of what was picked', () => {
+    render(<BoxScreen />)
+    pickSizeManually('6')
+    const [a, b] = FLAVORS
+    const tile = screen.getByRole('button', { name: new RegExp(a.name) })
+    for (let i = 0; i < 6; i++) fireEvent.click(tile)
+
+    // no grid, no tap hint — just the tally and Save
+    expect(screen.queryByText('Tap a chocolate to add it')).not.toBeInTheDocument()
+    expect(screen.queryByText(b.name, { selector: '.flavor-name' })).not.toBeInTheDocument()
+    expect(screen.getByText('×6')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save box' })).not.toBeDisabled()
+
+    // taking one out brings the grid back
+    fireEvent.click(screen.getByRole('button', { name: `Remove one ${a.name}` }))
+    expect(screen.getByText('Tap a chocolate to add it')).toBeInTheDocument()
+    expect(screen.getByText(b.name, { selector: '.flavor-name' })).toBeInTheDocument()
+  })
+
   it('picking a size with a measured insert opens the camera first', () => {
     render(<BoxScreen />)
     fireEvent.click(screen.getByRole('button', { name: '6' }))

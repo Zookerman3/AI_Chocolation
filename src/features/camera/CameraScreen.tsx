@@ -123,6 +123,7 @@ export function CameraScreen({ session, onSessionChange, onManual, onComplete }:
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState<Detection[]>([])
   const [overflowed, setOverflowed] = useState<Detection[]>([])
+  const [alreadyCounted, setAlreadyCounted] = useState(0)
   const [addedCount, setAddedCount] = useState(0)
   const [galleryReady, setGalleryReady] = useState(detectorKind !== 'local')
   const [progress, setProgress] = useState<LoadProgress | null>(null)
@@ -166,6 +167,7 @@ export function CameraScreen({ session, onSessionChange, onManual, onComplete }:
         setAddedCount(result.session.pieces.length - before)
         setPending(result.needsReview)
         setOverflowed(result.overflowed)
+        setAlreadyCounted(result.alreadyCounted.length)
         setStatus('idle')
         if (isComplete(result.session)) onComplete?.()
       } catch (err) {
@@ -273,6 +275,12 @@ export function CameraScreen({ session, onSessionChange, onManual, onComplete }:
         <p className="camera-banner">
           {overflowed.length} more detected piece{overflowed.length === 1 ? '' : 's'} didn't fit — the box is already
           full.
+        </p>
+      )}
+      {alreadyCounted > 0 && (
+        <p role="status" className="camera-banner">
+          {alreadyCounted} piece{alreadyCounted === 1 ? ' was' : 's were'} already counted from an earlier photo of
+          this box — not added again.
         </p>
       )}
       {pending.length > 0 && (

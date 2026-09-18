@@ -181,7 +181,10 @@ Keep this honest and current. The judges score it.
   copper-splatter browns (Manhattan, Espresso Martini, Amaretto, Champagne, Turtle) under a strong
   colour cast or heavy noise, which is what the "please confirm" step is for. The gallery holds one
   physical piece per flavor, photographed 64 times; a second box of each would tighten it further.
-  Roboflow remains an opt-in override (`.env.example`) if a hosted detector ever beats this.
+  Roboflow remains an opt-in override (`.env.example`) if a hosted detector ever beats this. A second
+  photo of the same box doesn't double-count: every camera-read piece remembers its insert slot, a
+  slot already filled is skipped, and the screen says how many it skipped — so two of the same flavor
+  in two slots still count as two. (The Roboflow override reports no slots, so it has no such guard.)
 - **The camera needs enough pieces in the box to find the grid, and a real-angle check.** The
   grid-finder needs about a third of the slots filled (8 pieces in a 30, 5 in a 16, 4 in a 6 or 10)
   to lock on; below that it falls back to reading the outline as drawn, which is when "roughly lined

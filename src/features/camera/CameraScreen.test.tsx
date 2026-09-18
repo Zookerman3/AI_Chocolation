@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { StrictMode } from 'react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CameraScreen } from './CameraScreen.tsx'
 import { startSession } from '../box/boxSession.ts'
 import { FLAVORS } from '../../data/flavors.ts'
@@ -33,7 +34,7 @@ describe('CameraScreen', () => {
     ])
     const session = startSession(6, 1000)
     const onSessionChange = vi.fn()
-    render(<CameraScreen session={session} onSessionChange={onSessionChange} onClose={vi.fn()} />)
+    render(<CameraScreen session={session} onSessionChange={onSessionChange} onManual={vi.fn()} />)
 
     uploadPhoto()
 
@@ -52,7 +53,7 @@ describe('CameraScreen', () => {
     const onSessionChange = vi.fn((s) => {
       current = s
     })
-    render(<CameraScreen session={session} onSessionChange={onSessionChange} onClose={vi.fn()} />)
+    render(<CameraScreen session={session} onSessionChange={onSessionChange} onManual={vi.fn()} />)
 
     uploadPhoto()
     await waitFor(() => expect(screen.getByText('Please confirm')).toBeInTheDocument())
@@ -69,7 +70,7 @@ describe('CameraScreen', () => {
     ])
     const session = startSession(6, 1000)
     const onSessionChange = vi.fn()
-    render(<CameraScreen session={session} onSessionChange={onSessionChange} onClose={vi.fn()} />)
+    render(<CameraScreen session={session} onSessionChange={onSessionChange} onManual={vi.fn()} />)
 
     uploadPhoto()
     await waitFor(() => expect(screen.getByText('Please confirm')).toBeInTheDocument())
@@ -80,9 +81,44 @@ describe('CameraScreen', () => {
 
   it('shows a clear error if detection fails, instead of silently doing nothing', async () => {
     detectMock.mockRejectedValue(new Error('Roboflow inference failed: 500 Internal Server Error'))
-    render(<CameraScreen session={startSession(6, 1000)} onSessionChange={vi.fn()} onClose={vi.fn()} />)
+    render(<CameraScreen session={startSession(6, 1000)} onSessionChange={vi.fn()} onManual={vi.fn()} />)
 
     uploadPhoto()
     await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent(/500/))
+  })
+
+  it('the "Pick manually" button at the top hands control back to the tile grid', () => {
+    const onManual = vi.fn()
+    render(<CameraScreen session={startSession(6, 1000)} onSessionChange={vi.fn()} onManual={onManual} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /Pick manually/ }))
+    expect(onManual).toHaveBeenCalledOnce()
+  })
+
+  // Two overlapping requests for the same lens is how the preview ends up dead
+  // and the cashier opens the screen twice to get a picture. StrictMode mounts
+  // every effect twice in dev, so without the shared stream this asks the camera
+  // for a second lens while the first is still being handed over.
+  describe('opening the screen', () => {
+    const originalMediaDevices = Object.getOwnPropertyDescriptor(navigator, 'mediaDevices')
+
+    afterEach(() => {
+      if (originalMediaDevices) Object.defineProperty(navigator, 'mediaDevices', originalMediaDevices)
+      else Reflect.deleteProperty(navigator as unknown as Record<string, unknown>, 'mediaDevices')
+    })
+
+    it('asks for the camera once, even though StrictMode mounts the screen twice', async () => {
+      const getUserMedia = vi.fn().mockResolvedValue({ getTracks: () => [{ stop: vi.fn() }] })
+      Object.defineProperty(navigator, 'mediaDevices', { value: { getUserMedia }, configurable: true })
+
+      render(
+        <StrictMode>
+          <CameraScreen session={startSession(16, 1000)} onSessionChange={vi.fn()} onManual={vi.fn()} />
+        </StrictMode>,
+      )
+
+      await waitFor(() => expect(getUserMedia).toHaveBeenCalled())
+      expect(getUserMedia).toHaveBeenCalledTimes(1)
+    })
   })
 })

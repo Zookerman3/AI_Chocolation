@@ -11,17 +11,65 @@ import type { GridSpec, Rect } from './grid.ts'
 interface CameraScreenProps {
   session: BoxSession
   onSessionChange: (session: BoxSession) => void
-  onClose: () => void
+  /** Leaves the camera for the tile grid — same session, same pieces, just a
+   * different way to add the rest. */
+  onManual: () => void
 }
 
 type PreviewState = 'starting' | 'live' | 'unavailable'
 
+const VIDEO_WANTED: MediaStreamConstraints = {
+  video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1440 } },
+  audio: false,
+}
+
+/** How long the camera is held after the screen lets go of it. A StrictMode
+ * remount comes back in the same tick; a cashier leaving the screen does not. */
+const RELEASE_DELAY_MS = 250
+
+/** The camera, asked for once and shared, rather than once per mount.
+ *
+ * Two overlapping getUserMedia calls for the same lens is a real way to end up
+ * with a dead preview: the second call can be handed the track the first one is
+ * about to stop, and the screen then sits on "Starting the camera…" until you
+ * back out and come in again — the "I had to click it twice" bug. React's
+ * StrictMode mounts every effect twice in dev, so it does exactly that on every
+ * single open. Keeping the stream out here means a remount reuses it instead of
+ * racing it, and the camera is released a moment after the last screen is done. */
+let shared: Promise<MediaStream> | null = null
+let releaseTimer: number | null = null
+
+function acquireCamera(media: MediaDevices): Promise<MediaStream> {
+  if (releaseTimer !== null) {
+    clearTimeout(releaseTimer)
+    releaseTimer = null
+  }
+  if (!shared) {
+    shared = media.getUserMedia(VIDEO_WANTED).catch((err: unknown) => {
+      shared = null // a refusal is not cached: the next open asks again
+      throw err
+    })
+  }
+  return shared
+}
+
+function releaseCameraSoon(): void {
+  if (releaseTimer !== null) clearTimeout(releaseTimer)
+  releaseTimer = window.setTimeout(() => {
+    releaseTimer = null
+    const held = shared
+    shared = null
+    void held?.then((stream) => stream.getTracks().forEach((t) => t.stop())).catch(() => {})
+  }, RELEASE_DELAY_MS)
+}
+
 /** Live rear-camera preview with the grid outline drawn over it. Falls back to the
  * OS camera (a file input) where getUserMedia isn't available — an http:// dev
- * server on a phone, an old browser, or a denied permission. */
+ * server on a phone, an old browser, or a denied permission. Every way this can
+ * fail ends on 'unavailable', which is still a working way to capture a box;
+ * none of them leave the cashier watching a veil that never lifts. */
 function useCameraPreview(enabled: boolean) {
   const videoRef = useRef<HTMLVideoElement>(null)
-  const streamRef = useRef<MediaStream | null>(null)
   const [state, setState] = useState<PreviewState>('starting')
   const [frame, setFrame] = useState<{ width: number; height: number } | null>(null)
 
@@ -33,35 +81,39 @@ function useCameraPreview(enabled: boolean) {
       return
     }
     let cancelled = false
-    media
-      .getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1440 } }, audio: false })
+    acquireCamera(media)
       .then((stream) => {
-        if (cancelled) {
-          stream.getTracks().forEach((t) => t.stop())
+        if (cancelled) return
+        const video = videoRef.current
+        if (!video) {
+          setState('unavailable') // no element to play into: offer the photo card instead of hanging
           return
         }
-        streamRef.current = stream
-        const video = videoRef.current
-        if (!video) return
         video.srcObject = stream
-        video.onloadedmetadata = () => {
+        const ready = () => {
+          if (cancelled) return
           setFrame({ width: video.videoWidth, height: video.videoHeight })
           setState('live')
           void video.play().catch(() => setState('unavailable'))
         }
+        // A stream that is already running brings its metadata with it, so the
+        // event may have been and gone before we could listen for it.
+        if (video.readyState >= 1 && video.videoWidth > 0) ready()
+        else video.addEventListener('loadedmetadata', ready, { once: true })
       })
-      .catch(() => setState('unavailable'))
+      .catch(() => {
+        if (!cancelled) setState('unavailable')
+      })
     return () => {
       cancelled = true
-      streamRef.current?.getTracks().forEach((t) => t.stop())
-      streamRef.current = null
+      releaseCameraSoon()
     }
   }, [enabled])
 
   return { videoRef, state, frame }
 }
 
-export function CameraScreen({ session, onSessionChange, onClose }: CameraScreenProps) {
+export function CameraScreen({ session, onSessionChange, onManual }: CameraScreenProps) {
   const grid = gridFor(session.size)
   const [status, setStatus] = useState<'idle' | 'detecting' | 'error'>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -154,8 +206,8 @@ export function CameraScreen({ session, onSessionChange, onClose }: CameraScreen
               the tiles for this one.
             </p>
           </div>
-          <button type="button" className="button button-dark" onClick={onClose}>
-            Done
+          <button type="button" className="button button-dark" onClick={onManual}>
+            ▦ Pick manually
           </button>
         </div>
       </section>
@@ -176,8 +228,8 @@ export function CameraScreen({ session, onSessionChange, onClose }: CameraScreen
             Anything the camera isn't sure about comes back for one tap.
           </p>
         </div>
-        <button type="button" className="button button-dark" onClick={onClose}>
-          Done
+        <button type="button" className="button button-dark" onClick={onManual}>
+          ▦ Pick manually
         </button>
       </div>
 

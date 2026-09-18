@@ -7,6 +7,11 @@ import type { LoadProgress } from './recognizer.ts'
 import { FLAVORS, flavorOrPlaceholder } from '../../data/flavors.ts'
 import { cells, gridFor, outlineRect } from './grid.ts'
 import type { GridSpec, Rect } from './grid.ts'
+import { BLURRY_MESSAGE } from './localDetector.ts'
+import { grabPhotoBlob } from './frameGrab.ts'
+import { useAutoCapture } from './useAutoCapture.ts'
+import type { AutoCaptureState } from './useAutoCapture.ts'
+import type { AlignmentPhase, Point } from './alignment.ts'
 
 interface CameraScreenProps {
   session: BoxSession
@@ -26,6 +31,13 @@ const VIDEO_WANTED: MediaStreamConstraints = {
 /** How long the camera is held after the screen lets go of it. A StrictMode
  * remount comes back in the same tick; a cashier leaving the screen does not. */
 const RELEASE_DELAY_MS = 250
+
+/** A frame refused as blurry gets another go on its own after this long — the
+ * hand usually settles within a second. Other errors wait for the cashier. */
+const BLUR_RETRY_MS = 800
+
+/** Hooks run unconditionally; a box size with no insert just never enables the loop. */
+const NO_GRID: GridSpec = { rows: 1, cols: 1 }
 
 /** The camera, asked for once and shared, rather than once per mount.
  *
@@ -125,6 +137,21 @@ export function CameraScreen({ session, onSessionChange, onManual }: CameraScree
   const [degraded, setDegraded] = useState<string | null>(null)
   const { videoRef, state: preview, frame } = useCameraPreview(grid !== null)
 
+  // Auto-capture: look at the live preview a few times a second and take the
+  // photo once the insert's grid has been found near the outline and held
+  // still. One lock, one photo; "Scan again" arms it for the next box.
+  const auto = useAutoCapture({
+    videoRef,
+    grid: grid ?? NO_GRID,
+    enabled: grid !== null && preview === 'live' && galleryReady && status !== 'detecting' && pending.length === 0,
+    onLocked: () => capture(),
+  })
+  const { rearm: rearmAuto } = auto
+  const retryTimer = useRef<number | null>(null)
+  useEffect(() => () => {
+    if (retryTimer.current !== null) window.clearTimeout(retryTimer.current)
+  }, [])
+
   // Warm the recognizer while the cashier is still lining the box up, so the
   // first capture doesn't pay for the download. ~6 MB the first time, precached
   // by the service worker after that.
@@ -164,26 +191,40 @@ export function CameraScreen({ session, onSessionChange, onManual }: CameraScree
         setOverflowed(result.overflowed)
         setStatus('idle')
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Could not read that photo.')
+        const message = err instanceof Error ? err.message : 'Could not read that photo.'
+        setError(message)
         setStatus('error')
+        // A soft frame is worth another go by itself once the hand settles;
+        // anything else stays on screen until the cashier acts.
+        if (message === BLURRY_MESSAGE) {
+          if (retryTimer.current !== null) window.clearTimeout(retryTimer.current)
+          retryTimer.current = window.setTimeout(() => {
+            retryTimer.current = null
+            rearmAuto()
+          }, BLUR_RETRY_MS)
+        }
       }
     },
-    [grid, session, onSessionChange],
+    [grid, session, onSessionChange, rearmAuto],
   )
 
+  /** Take the photo now — from the Capture button or from the alignment loop.
+   * Through a Blob so the live path and the file-input path are one code path. */
   function capture() {
     const video = videoRef.current
     if (!video || !frame) return
-    const canvas = document.createElement('canvas')
-    canvas.width = frame.width
-    canvas.height = frame.height
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    ctx.drawImage(video, 0, 0, frame.width, frame.height)
-    // Through a Blob so the live path and the file-input path are one code path.
-    canvas.toBlob((blob) => {
+    auto.disarm()
+    void grabPhotoBlob(video, frame).then((blob) => {
       if (blob) void handlePhoto(blob)
-    }, 'image/jpeg', 0.92)
+    })
+  }
+
+  function scanAgain() {
+    setAddedCount(0)
+    setOverflowed([])
+    setError(null)
+    setStatus('idle')
+    auto.rearm()
   }
 
   function resolvePending(detection: Detection, chosenFlavorId: string | null) {
@@ -216,6 +257,8 @@ export function CameraScreen({ session, onSessionChange, onManual }: CameraScree
 
   const busy = status === 'detecting'
   const canCapture = preview === 'live' && galleryReady && !busy
+  const outlinePhase: OutlinePhase = auto.armed ? auto.phase : 'done'
+  const badge = badgeFor(auto, busy, pending.length > 0)
 
   return (
     <section aria-labelledby="camera-heading" className="camera-screen panel">
@@ -224,8 +267,8 @@ export function CameraScreen({ session, onSessionChange, onManual }: CameraScree
           <p className="eyebrow">Camera assist · {grid.rows}×{grid.cols} insert</p>
           <h2 id="camera-heading">Scan the box</h2>
           <p className="helper-text">
-            Get the open box inside the outline — close is good enough, it finds the slots itself — then capture.
-            Anything the camera isn't sure about comes back for one tap.
+            Get the open box inside the outline and hold still — it takes the picture itself once it finds the slots
+            (or tap Capture). Anything the camera isn't sure about comes back for one tap.
           </p>
         </div>
         <button type="button" className="button button-dark" onClick={onManual}>
@@ -240,7 +283,19 @@ export function CameraScreen({ session, onSessionChange, onManual }: CameraScree
             style={frame ? { aspectRatio: `${frame.width} / ${frame.height}` } : { aspectRatio: '4 / 3' }}
           >
             <video ref={videoRef} className="camera-video" playsInline muted autoPlay aria-label="Live camera preview" />
-            {frame && <GridOutline grid={grid} outline={outlineRect(grid, frame.width, frame.height)} />}
+            {frame && (
+              <GridOutline
+                grid={grid}
+                outline={outlineRect(grid, frame.width, frame.height)}
+                phase={outlinePhase}
+                corners={auto.corners}
+              />
+            )}
+            {preview === 'live' && galleryReady && (
+              <div role="status" aria-live="polite" className={`camera-badge camera-badge--${badge.tone}`}>
+                {badge.text}
+              </div>
+            )}
             {preview === 'starting' && <div className="camera-veil">Starting the camera…</div>}
             {preview === 'live' && !galleryReady && status !== 'error' && (
               <div className="camera-veil">{loadingText(progress)}</div>
@@ -250,6 +305,11 @@ export function CameraScreen({ session, onSessionChange, onManual }: CameraScree
             <button type="button" className="button button-accent" onClick={capture} disabled={!canCapture}>
               {busy ? 'Reading…' : 'Capture'}
             </button>
+            {!auto.armed && !busy && (
+              <button type="button" className="button button-light" onClick={scanAgain}>
+                Scan again
+              </button>
+            )}
             <label className="button button-quiet camera-upload">
               <span>Use a photo instead</span>
               <input
@@ -352,27 +412,64 @@ export function loadingText(p: LoadProgress | null): string {
   return `Loading the recognizer — ${mb(p.loaded)} MB so far, first time only`
 }
 
-function GridOutline({ grid, outline }: { grid: GridSpec; outline: Rect }) {
+/** The outline's look: the alignment phases while armed, 'done' once a photo
+ * has been taken and the loop is waiting for "Scan again". */
+type OutlinePhase = AlignmentPhase | 'done'
+
+/** What the badge over the preview says. Written from the loop's state so the
+ * cashier always knows what the camera is waiting for. */
+export function badgeFor(
+  auto: Pick<AutoCaptureState, 'armed' | 'phase' | 'stableTicks' | 'stableTicksNeeded'>,
+  busy: boolean,
+  reviewing: boolean,
+): { tone: OutlinePhase; text: string } {
+  if (busy) return { tone: 'locked', text: '✓ Got it — reading…' }
+  if (!auto.armed) {
+    return {
+      tone: 'done',
+      text: reviewing ? '✓ Scanned — confirm below, then Scan again' : '✓ Scanned — tap Scan again for another box',
+    }
+  }
+  if (auto.phase === 'locked') return { tone: 'locked', text: '✓ Got it' }
+  if (auto.phase === 'aligning') {
+    if (auto.stableTicks === 0) return { tone: 'aligning', text: 'Almost — line the box up with the outline' }
+    const dots = '●'.repeat(auto.stableTicks) + '○'.repeat(Math.max(0, auto.stableTicksNeeded - auto.stableTicks))
+    return { tone: 'aligning', text: `Hold still… ${dots}` }
+  }
+  return { tone: 'searching', text: 'Looking for the box…' }
+}
+
+function GridOutline({
+  grid, outline, phase, corners,
+}: { grid: GridSpec; outline: Rect; phase: OutlinePhase; corners: Point[] | null }) {
   const pct = (v: number) => `${v * 100}%`
   return (
-    <div
-      className="camera-outline"
-      aria-hidden="true"
-      style={{ left: pct(outline.x), top: pct(outline.y), width: pct(outline.width), height: pct(outline.height) }}
-    >
-      {cells(grid, outline).map((c) => (
-        <span
-          key={`${c.row}-${c.col}`}
-          className="camera-outline-cell"
-          style={{
-            left: pct((c.box.x - outline.x) / outline.width),
-            top: pct((c.box.y - outline.y) / outline.height),
-            width: pct(c.box.width / outline.width),
-            height: pct(c.box.height / outline.height),
-          }}
-        />
-      ))}
-    </div>
+    <>
+      <div
+        className={`camera-outline camera-outline--${phase}`}
+        aria-hidden="true"
+        style={{ left: pct(outline.x), top: pct(outline.y), width: pct(outline.width), height: pct(outline.height) }}
+      >
+        {cells(grid, outline).map((c) => (
+          <span
+            key={`${c.row}-${c.col}`}
+            className="camera-outline-cell"
+            style={{
+              left: pct((c.box.x - outline.x) / outline.width),
+              top: pct((c.box.y - outline.y) / outline.height),
+              width: pct(c.box.width / outline.width),
+              height: pct(c.box.height / outline.height),
+            }}
+          />
+        ))}
+      </div>
+      {/* Where the app thinks the box is, drawn from the fitted lattice's corners. */}
+      {corners && (
+        <svg className={`camera-fit camera-fit--${phase}`} viewBox="0 0 1 1" preserveAspectRatio="none" aria-hidden="true">
+          <polygon points={corners.map((p) => `${p.x},${p.y}`).join(' ')} />
+        </svg>
+      )}
+    </>
   )
 }
 

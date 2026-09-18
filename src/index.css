@@ -253,6 +253,18 @@ h3 { margin-bottom: 3px; font-size: 1.25rem; }
 .camera-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 .pending-thumb { width: 44px; height: 44px; flex: none; border-radius: var(--radius-sm); object-fit: cover; background: var(--surface-2); }
 
+/* Auto-capture feedback: the outline is dashed while looking, solid gold while
+ * lining up, green once the box is held still (and after the photo is taken). */
+.camera-outline--searching { border-style: dashed; }
+.camera-outline--locked, .camera-outline--done { border-color: var(--success); box-shadow: 0 0 0 2000px rgba(0, 0, 0, .45), 0 0 0 4px rgba(58, 135, 53, .45); }
+.camera-outline--locked .camera-outline-cell, .camera-outline--done .camera-outline-cell { border-color: rgba(58, 135, 53, .5); }
+.camera-fit { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.camera-fit polygon { fill: rgba(158, 137, 89, .1); stroke: var(--brand-gold); stroke-width: 2px; vector-effect: non-scaling-stroke; }
+.camera-fit--locked polygon, .camera-fit--done polygon { fill: rgba(58, 135, 53, .12); stroke: var(--success); }
+.camera-badge { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 2; padding: 7px 12px; border-radius: var(--radius-pill); background: rgba(0, 0, 0, .72); color: var(--cream); font-size: .82rem; font-weight: 600; white-space: nowrap; }
+.camera-badge--aligning { background: var(--brand-gold); }
+.camera-badge--locked, .camera-badge--done { background: var(--success); }
+
 /* --- Render-crash backstop and the seconds-per-box card -------------------- */
 
 .crash { max-width: 560px; margin: 40px auto; padding: 32px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--cream); }

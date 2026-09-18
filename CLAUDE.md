@@ -35,8 +35,8 @@ Source: https://www.wsuaiclub.com/hq#prompts (Build track, released Sep 13 2026,
 A tablet screen whose flavor tiles are arranged exactly like the physical display case, so the
 cashier taps where they just grabbed. Pick box size → tap a tile per piece → count shows `7 / 16` →
 undo → save only when the count matches → one record per box → CSV/JSON export → timer on every box.
-Plus a stats view. (The tablet's demo-mode toggle was removed on Sep 18; the office dashboard's
-"Load sample data" is the no-chocolates path for judges.)
+Plus a stats view. (The tablet's demo-mode toggle and the dashboard's sample data were both removed
+on Sep 18: every screen shows real saved boxes only, so save some before judging.)
 
 **Phase 2 (Wed–Fri): camera assist — checkpoint passed, on-device, robust.**
 Per-cell crop and match: the cashier gets the open box roughly inside an outline on screen;

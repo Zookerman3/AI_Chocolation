@@ -1,45 +1,21 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { BoxScreen } from './features/box/BoxScreen.tsx'
 import { RecordsScreen } from './features/records/RecordsScreen.tsx'
 import { StatsScreen } from './features/stats/StatsScreen.tsx'
-import { generateDemoRecords } from './app/demoData.ts'
 import { ErrorBoundary } from './app/ErrorBoundary.tsx'
 import { SyncStatus } from './features/sync/SyncStatus.tsx'
 import { LocationPicker } from './features/sync/LocationPicker.tsx'
 import { useSync } from './features/sync/useSync.ts'
-
-const DEMO_MODE_KEY = 'ai-chocolation:demo-mode'
-
-function loadDemoOn(): boolean {
-  try {
-    return localStorage.getItem(DEMO_MODE_KEY) === '1'
-  } catch {
-    return false
-  }
-}
 
 type Tab = 'box' | 'records' | 'stats'
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('box')
   const [refreshKey, setRefreshKey] = useState(0)
-  const [demoOn, setDemoOn] = useState(loadDemoOn)
-  const demoRecords = useMemo(() => (demoOn ? generateDemoRecords() : undefined), [demoOn])
   // Sync runs off the same counter that already remounts Records and Stats after
   // a save, so a new box is offered to the server the moment it is stored — and
   // never before it is stored. Nothing on the counter waits for this.
   const sync = useSync(refreshKey)
-
-  function toggleDemo() {
-    const next = !demoOn
-    setDemoOn(next)
-    try {
-      if (next) localStorage.setItem(DEMO_MODE_KEY, '1')
-      else localStorage.removeItem(DEMO_MODE_KEY)
-    } catch {
-      // Demo toggle still works if localStorage is unavailable.
-    }
-  }
 
   return (
     <main className="shell">
@@ -50,7 +26,6 @@ export default function App() {
         </div>
         <div className="header-tools">
           <SyncStatus state={sync} />
-          <label className="demo-toggle"><input type="checkbox" checked={demoOn} onChange={toggleDemo} /><span className="toggle-track" aria-hidden="true" /><span>Demo mode</span></label>
         </div>
       </header>
       <nav className="app-nav" aria-label="Screens">
@@ -63,8 +38,8 @@ export default function App() {
           so a crash shows a reload card instead of a blank tablet mid-rush. */}
       <ErrorBoundary>
         {tab === 'box' && <BoxScreen onSaved={() => setRefreshKey((k) => k + 1)} />}
-        {tab === 'records' && <RecordsScreen key={refreshKey} demoRecords={demoRecords} onChange={() => setRefreshKey((k) => k + 1)} />}
-        {tab === 'stats' && <StatsScreen key={refreshKey} demoRecords={demoRecords} />}
+        {tab === 'records' && <RecordsScreen key={refreshKey} onChange={() => setRefreshKey((k) => k + 1)} />}
+        {tab === 'stats' && <StatsScreen key={refreshKey} />}
       </ErrorBoundary>
       <footer className="app-footer">
         <LocationPicker onChange={() => sync.syncNow()} />

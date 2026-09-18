@@ -2,9 +2,9 @@
 // src/features/sync/ posts each saved box to the API (api/boxes.ts) and never
 // writes back here.
 //
-// Demo mode (see src/app/demoData.ts) never touches this storage: it's generated fresh
-// and passed down as a display-only override in App.tsx, so a real box saved while
-// demo mode happens to be on can never be lost or overwritten.
+// Sample data (src/app/demoData.ts) is display-only and is never written here; the
+// Records and Stats screens accept it as an optional override, but the app no longer
+// offers a switch for it.
 
 import type { BoxRecord } from '../../domain/types.ts'
 

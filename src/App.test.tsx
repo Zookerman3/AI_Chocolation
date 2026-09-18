@@ -30,18 +30,9 @@ describe('App', () => {
     expect(screen.getByText('No boxes saved yet.')).toBeInTheDocument()
   })
 
-  it('demo mode fills in records and stats, then clears them back out', () => {
+  it('has no demo switch: what Records shows is what was saved', () => {
     render(<App />)
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Demo mode' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Records' }))
-    expect(screen.getByText(/Saved boxes \(24\)/)).toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Demo mode' }))
-    expect(screen.getByText(/Saved boxes \(0\)/)).toBeInTheDocument()
-  })
-
-  it('never loses a real saved box across a demo mode toggle', () => {
-    render(<App />)
+    expect(screen.queryByRole('checkbox', { name: 'Demo mode' })).not.toBeInTheDocument()
 
     // save one real box
     fireEvent.click(screen.getByRole('button', { name: '6' }))
@@ -51,15 +42,8 @@ describe('App', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save box' }))
     expect(listRecords()).toHaveLength(1)
 
-    // demo mode shows only the 24 demo boxes, not 25
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Demo mode' }))
     fireEvent.click(screen.getByRole('button', { name: 'Records' }))
-    expect(screen.getByText(/Saved boxes \(24\) · demo/)).toBeInTheDocument()
-
-    // the real box was never touched by entering/exiting demo mode
-    expect(listRecords()).toHaveLength(1)
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Demo mode' }))
     expect(screen.getByText(/Saved boxes \(1\)/)).toBeInTheDocument()
-    expect(listRecords()).toHaveLength(1)
+    expect(screen.queryByText(/demo/i)).not.toBeInTheDocument()
   })
 })

@@ -5,6 +5,17 @@ import { listRecords } from '../records/records.ts'
 import { defaultLayout, loadLayout } from '../layout/caseLayout.ts'
 import { FLAVORS } from '../../data/flavors.ts'
 
+// Sizes with a measured insert (6, 10, 16, 30) go straight to the camera when
+// picked, same as the live app. These tests are about the tile grid, so pick a
+// size and immediately switch back with the camera's own "Pick manually"
+// button — exactly the escape hatch a cashier would use.
+vi.mock('../camera/config.ts', () => ({
+  isCameraModelConfigured: true,
+  detectorKind: 'roboflow',
+  getDetector: () => ({ detect: vi.fn().mockResolvedValue([]) }),
+  preloadRecognizer: () => new Promise(() => {}),
+}))
+
 beforeEach(() => {
   localStorage.clear()
 })
@@ -13,11 +24,20 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+/** Picks a box size and lands on the tile grid: sizes with a measured insert
+ * open the camera first, so this taps its "Pick manually" button; the
+ * 50-piece box has no insert and goes straight to the tiles. */
+function pickSizeManually(size: string) {
+  fireEvent.click(screen.getByRole('button', { name: size }))
+  const manual = screen.queryByRole('button', { name: /Pick manually/ })
+  if (manual) fireEvent.click(manual)
+}
+
 describe('BoxScreen', () => {
   it('assembles a full 6-piece box by tapping tiles, saves it, and records it', () => {
     render(<BoxScreen />)
 
-    fireEvent.click(screen.getByRole('button', { name: '6' }))
+    pickSizeManually('6')
     expect(screen.getByRole('heading', { name: '0 / 6' })).toBeInTheDocument()
 
     const firstFlavor = FLAVORS[0]
@@ -41,9 +61,32 @@ describe('BoxScreen', () => {
     expect(screen.getByText(/Saved 6-piece box in/)).toBeInTheDocument()
   })
 
-  it('undo removes the last tapped piece', () => {
+  it('picking a size with a measured insert opens the camera first', () => {
     render(<BoxScreen />)
     fireEvent.click(screen.getByRole('button', { name: '6' }))
+    expect(screen.getByRole('heading', { name: 'Scan the box' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /Pick manually/ }))
+    expect(screen.getByRole('heading', { name: '0 / 6' })).toBeInTheDocument()
+  })
+
+  it('picking the 50-piece box (no measured insert) goes straight to the tiles', () => {
+    render(<BoxScreen />)
+    fireEvent.click(screen.getByRole('button', { name: '50' }))
+    expect(screen.getByRole('heading', { name: '0 / 50' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Scan the box' })).not.toBeInTheDocument()
+  })
+
+  it('has no flavor search bar', () => {
+    render(<BoxScreen />)
+    pickSizeManually('6')
+    expect(screen.queryByPlaceholderText('Find a flavor…')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Find a flavor')).not.toBeInTheDocument()
+  })
+
+  it('undo removes the last tapped piece', () => {
+    render(<BoxScreen />)
+    pickSizeManually('6')
 
     const [a, b] = FLAVORS
     fireEvent.click(screen.getByRole('button', { name: new RegExp(a.name) }))
@@ -85,7 +128,7 @@ describe('BoxScreen', () => {
 
   it('asks for confirmation before discarding a box with pieces already tapped', () => {
     render(<BoxScreen />)
-    fireEvent.click(screen.getByRole('button', { name: '6' }))
+    pickSizeManually('6')
     fireEvent.click(screen.getByRole('button', { name: new RegExp(FLAVORS[0].name) }))
 
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
@@ -101,7 +144,7 @@ describe('BoxScreen', () => {
 
   it('cancels an empty box without asking for confirmation', () => {
     render(<BoxScreen />)
-    fireEvent.click(screen.getByRole('button', { name: '6' }))
+    pickSizeManually('6')
     const confirmSpy = vi.spyOn(window, 'confirm')
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(confirmSpy).not.toHaveBeenCalled()
@@ -110,7 +153,7 @@ describe('BoxScreen', () => {
 
   it('the running tally shows per-flavor counts, and its + button adds without re-tapping the tile', () => {
     render(<BoxScreen />)
-    fireEvent.click(screen.getByRole('button', { name: '6' }))
+    pickSizeManually('6')
     const [a] = FLAVORS
     fireEvent.click(screen.getByRole('button', { name: new RegExp(a.name) }))
 
@@ -124,7 +167,7 @@ describe('BoxScreen', () => {
 
   it("the tally's − button removes one of that flavor specifically, leaving others alone", () => {
     render(<BoxScreen />)
-    fireEvent.click(screen.getByRole('button', { name: '6' }))
+    pickSizeManually('6')
     const [a, b] = FLAVORS
     // grab both tile buttons once, before any tally chips exist to make the name ambiguous
     const tileA = screen.getByRole('button', { name: new RegExp(a.name) })
@@ -140,19 +183,6 @@ describe('BoxScreen', () => {
     const counts = screen.getAllByText(/×\d/)
     expect(counts).toHaveLength(2)
     expect(counts.map((el) => el.textContent)).toEqual(['×1', '×1'])
-  })
-
-  it('dims non-matching tiles when searching, without blocking a tap on them', () => {
-    render(<BoxScreen />)
-    fireEvent.click(screen.getByRole('button', { name: '6' }))
-    const [a, b] = FLAVORS
-
-    fireEvent.change(screen.getByPlaceholderText('Find a flavor…'), { target: { value: a.name } })
-    const nonMatch = screen.getByRole('button', { name: new RegExp(b.name) })
-    expect(nonMatch.className).toContain('flavor-tile--dim')
-
-    fireEvent.click(nonMatch)
-    expect(screen.getByRole('heading', { name: '1 / 6' })).toBeInTheDocument()
   })
 
   it('resets a rearranged case layout back to default', () => {

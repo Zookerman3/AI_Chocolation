@@ -19,10 +19,23 @@ export function listRecords(): BoxRecord[] {
   }
 }
 
-export function saveRecord(record: BoxRecord): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify([record, ...listRecords()]))
+/** Returns false when the device refused the write (a full quota, storage
+ * disabled) instead of throwing. A throw here reaches the counter as the
+ * render-crash card mid-rush, which is the one thing this screen must not do —
+ * every other write in the app is guarded the same way. */
+export function saveRecord(record: BoxRecord): boolean {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([record, ...listRecords()]))
+    return true
+  } catch {
+    return false
+  }
 }
 
 export function clearRecords(): void {
-  localStorage.removeItem(STORAGE_KEY)
+  try {
+    localStorage.removeItem(STORAGE_KEY)
+  } catch {
+    // Nothing to clear if storage is unavailable.
+  }
 }

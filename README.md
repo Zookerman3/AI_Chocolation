@@ -23,7 +23,7 @@ anything merges.
 
 ## Team setup
 
-You need **Node 24 LTS** (20.19+ also works), **Git**, the **GitHub CLI** signed in (`gh auth login`), and
+You need **Node 24 LTS** (22.12+ also works; Node 20 cannot run the tests), **Git**, the **GitHub CLI** signed in (`gh auth login`), and
 **Claude Code for the terminal** signed in with your Pro/Max account.
 
 ```bash
@@ -34,7 +34,7 @@ npm run check
 ```
 
 `npm run check` should end with a successful build. If it fails on Vite or Rolldown,
-your Node is too old: `node -v` must be 20.19 or newer.
+your Node is too old: `node -v` must be 22.12 or newer. On Node 20 the suite does not merely fail, it does not start: jsdom's undici calls `worker_threads.markAsUncloneable`, which Node 20 does not have, so `npm run check` can report "no tests" and still look clean.
 
 ## Daily workflow
 

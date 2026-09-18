@@ -15,6 +15,7 @@ export function BoxScreen({ onSaved }: BoxScreenProps) {
   const [layout, setLayout] = useState(() => loadLayout())
   const [session, setSession] = useState<BoxSession | null>(null)
   const [savedFlash, setSavedFlash] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [now, setNow] = useState(() => Date.now())
   const [rearranging, setRearranging] = useState(false)
   const [swapFrom, setSwapFrom] = useState<number | null>(null)
@@ -35,7 +36,9 @@ export function BoxScreen({ onSaved }: BoxScreenProps) {
   function toggleRearrange() { setRearranging((on) => !on); setSwapFrom(null) }
   function resetLayout() { if (!window.confirm('Reset the case layout to the default order? Your rearranged positions will be lost.')) return; const next = defaultLayout(); setLayout(next); saveLayout(next); setSwapFrom(null) }
   function cancel() { if (session && session.pieces.length > 0) { const ok = window.confirm(`Discard this ${session.size}-piece box? ${session.pieces.length} piece(s) already tapped will be lost.`); if (!ok) return }; setSession(null) }
-  function save() { if (!session || !isComplete(session)) return; const record = toRecord(session, now); saveRecord(record); setSavedFlash(`Saved ${record.size}-piece box in ${(record.durationMs / 1000).toFixed(1)}s`); setSession(null); onSaved?.() }
+  // A refused write keeps the box on screen with its pieces intact, so the
+  // cashier can retry or write it down — losing the box silently would be worse.
+  function save() { if (!session || !isComplete(session)) return; const record = toRecord(session, now); if (!saveRecord(record)) { setSaveError('This tablet could not save that box — its storage is full. Free some space and tap Save again.'); return }; setSaveError(null); setSavedFlash(`Saved ${record.size}-piece box in ${(record.durationMs / 1000).toFixed(1)}s`); setSession(null); onSaved?.() }
 
   if (rearranging) return <section aria-labelledby="rearrange-heading" className="panel"><div className="box-toolbar"><div><p className="eyebrow">Case setup</p><h2 id="rearrange-heading">{swapFrom === null ? 'Arrange your case' : 'Choose the swap tile'}</h2><p className="helper-text">{swapFrom === null ? 'Tap a tile, then tap where it should go.' : 'Tap another tile to exchange their places.'}</p></div><div className="box-toolbar-actions"><button type="button" className="button button-quiet" onClick={resetLayout}>Reset to default</button><button type="button" className="button button-dark" onClick={toggleRearrange}>Done</button></div></div><FlavorGrid layout={layout} onTapCell={tapRearrangeCell} selectedIndex={swapFrom} /></section>
 
@@ -56,6 +59,7 @@ export function BoxScreen({ onSaved }: BoxScreenProps) {
       <FlavorGrid layout={layout} onTapCell={tapCell} disabled={complete} />
     </div>
     <aside className="tally-panel"><div className="tally-header"><div><p className="eyebrow">Your box</p><h3>{currentTally.length === 0 ? 'Nothing picked yet' : `${currentTally.length} flavor${currentTally.length === 1 ? '' : 's'}`}</h3></div><span className="tally-count">{session.pieces.length}/{session.size}</span></div>{currentTally.length === 0 ? <div className="empty-tally"><span aria-hidden="true">✦</span><p>Start with a favorite<br />from the case.</p></div> : <ul className="box-tally">{currentTally.map(({ flavorId, count }) => <li key={flavorId}><span className="tally-swatch" style={{ backgroundImage: `url(${flavorOrPlaceholder(flavorId).imageUrl})` }} /><span className="box-tally-name">{flavorOrPlaceholder(flavorId).name}</span><button type="button" className="box-tally-step" aria-label={`Remove one ${flavorOrPlaceholder(flavorId).name}`} onClick={() => setSession(removeOne(session, flavorId))}>−</button><span className="box-tally-count">×{count}</span><button type="button" className="box-tally-step" aria-label={`Add one more ${flavorOrPlaceholder(flavorId).name}`} disabled={complete} onClick={() => setSession(addPiece(session, flavorId))}>+</button></li>)}</ul>}
+      {saveError && <p role="alert" className="helper-text">{saveError}</p>}
       <div className="box-actions"><button type="button" className="button button-light" onClick={() => setShowCamera(true)} disabled={complete || !gridFor(session.size)} title={gridFor(session.size) ? undefined : `No measured insert for the ${session.size}-piece box yet`}>◎ Use camera</button><button type="button" aria-label="Undo" className="button button-light" onClick={() => setSession(undoLast(session))} disabled={session.pieces.length === 0}>↶ Undo</button><button type="button" className="button button-quiet" onClick={cancel}>Cancel</button><button type="button" className="button button-accent" onClick={save} disabled={!complete}>Save box <span aria-hidden="true">→</span></button></div>
     </aside>
   </section>

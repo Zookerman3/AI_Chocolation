@@ -1,12 +1,27 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { StrictMode } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CameraScreen } from './CameraScreen.tsx'
 import { startSession } from '../box/boxSession.ts'
 import { FLAVORS } from '../../data/flavors.ts'
+import { outlineHomography } from './gridFinder.ts'
+import { outlineRect } from './grid.ts'
 
 const [a, b] = FLAVORS
 const detectMock = vi.fn()
+const grabFrameMock = vi.fn()
+const findGridMock = vi.fn()
+
+// jsdom has no canvas: the pixels come from these instead. By default the
+// analysis loop sees no frame and the tests below drive the file input.
+vi.mock('./frameGrab.ts', () => ({
+  grabAnalysisFrame: (...args: unknown[]) => grabFrameMock(...args),
+  grabPhotoBlob: () => Promise.resolve(new Blob(['fake jpeg'], { type: 'image/jpeg' })),
+}))
+vi.mock('./gridFinder.ts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./gridFinder.ts')>()
+  return { ...actual, findGrid: (...args: unknown[]) => findGridMock(...args) }
+})
 
 vi.mock('./config.ts', () => ({
   isCameraModelConfigured: true,
@@ -19,6 +34,8 @@ vi.mock('./config.ts', () => ({
 
 beforeEach(() => {
   detectMock.mockReset()
+  grabFrameMock.mockReset().mockReturnValue(null)
+  findGridMock.mockReset().mockReturnValue(null)
 })
 
 function uploadPhoto() {
@@ -135,6 +152,76 @@ describe('CameraScreen', () => {
   // and the cashier opens the screen twice to get a picture. StrictMode mounts
   // every effect twice in dev, so without the shared stream this asks the camera
   // for a second lens while the first is still being handed over.
+  it('takes the photo itself once the box is lined up and held still — and only once', async () => {
+    // The screen shares one camera stream at module scope, so this test has to
+    // hand it back before the next one asks for it — hence the unmount and the
+    // wait past RELEASE_DELAY_MS in `finally`.
+    const originalMediaDevices = Object.getOwnPropertyDescriptor(navigator, 'mediaDevices')
+    const playSpy = vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
+    let unmount: (() => void) | undefined
+    vi.useFakeTimers()
+    try {
+      const getUserMedia = vi.fn().mockResolvedValue({ getTracks: () => [{ stop: vi.fn() }] })
+      Object.defineProperty(navigator, 'mediaDevices', { value: { getUserMedia }, configurable: true })
+      detectMock.mockResolvedValue([
+        { flavorId: a.id, confidence: 0.95, box: { x: 0, y: 0, width: 0.1, height: 0.1 }, rawClass: a.id },
+      ])
+      // The loop sees a 480x360 frame with the 4x4 lattice sitting exactly on the outline.
+      const grid = { rows: 4, cols: 4 }
+      const outline = outlineRect(grid, 480, 360)
+      grabFrameMock.mockReturnValue({ data: new Uint8ClampedArray(480 * 360 * 4), width: 480, height: 360 })
+      findGridMock.mockReturnValue({
+        homography: outlineHomography(grid, outline), landmarks: 12, inliers: 10, pitch: outline.width / 4,
+      })
+
+      const onSessionChange = vi.fn()
+      unmount = render(
+        <CameraScreen session={startSession(16, 1000)} onSessionChange={onSessionChange} onManual={vi.fn()} />,
+      ).unmount
+
+      // Let the camera promise settle, then tell the <video> it has a frame.
+      await act(async () => {
+        await Promise.resolve()
+        await Promise.resolve()
+      })
+      const video = document.querySelector('video')!
+      Object.defineProperty(video, 'videoWidth', { value: 1920, configurable: true })
+      Object.defineProperty(video, 'videoHeight', { value: 1440, configurable: true })
+      act(() => {
+        video.dispatchEvent(new Event('loadedmetadata'))
+      })
+      expect(screen.getByText(/looking for the box/i)).toBeInTheDocument()
+
+      // Three steady readings, then the photo is taken without a tap.
+      await act(async () => {
+        vi.advanceTimersByTime(250 * 3)
+        await Promise.resolve()
+        await Promise.resolve()
+        await Promise.resolve()
+      })
+      expect(detectMock).toHaveBeenCalledTimes(1)
+
+      // Latched: more steady frames do not read the box again.
+      await act(async () => {
+        vi.advanceTimersByTime(250 * 10)
+        await Promise.resolve()
+      })
+      expect(detectMock).toHaveBeenCalledTimes(1)
+      expect(screen.getByRole('button', { name: /scan again/i })).toBeInTheDocument()
+    } finally {
+      // Give the stream back: unmount schedules the release, the timers run it.
+      await act(async () => {
+        unmount?.()
+        vi.advanceTimersByTime(1000)
+        await Promise.resolve()
+      })
+      vi.useRealTimers()
+      playSpy.mockRestore()
+      if (originalMediaDevices) Object.defineProperty(navigator, 'mediaDevices', originalMediaDevices)
+      else Reflect.deleteProperty(navigator as unknown as Record<string, unknown>, 'mediaDevices')
+    }
+  })
+
   describe('opening the screen', () => {
     const originalMediaDevices = Object.getOwnPropertyDescriptor(navigator, 'mediaDevices')
 

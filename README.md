@@ -23,7 +23,7 @@ anything merges.
 
 ## Team setup
 
-You need **Node 24 LTS** (20.19+ also works), **Git**, the **GitHub CLI** signed in (`gh auth login`), and
+You need **Node 24 LTS** (22.12+ also works; Node 20 cannot run the tests), **Git**, the **GitHub CLI** signed in (`gh auth login`), and
 **Claude Code for the terminal** signed in with your Pro/Max account.
 
 ```bash
@@ -34,7 +34,7 @@ npm run check
 ```
 
 `npm run check` should end with a successful build. If it fails on Vite or Rolldown,
-your Node is too old: `node -v` must be 20.19 or newer.
+your Node is too old: `node -v` must be 22.12 or newer. On Node 20 the suite does not merely fail, it does not start: jsdom's undici calls `worker_threads.markAsUncloneable`, which Node 20 does not have, so `npm run check` can report "no tests" and still look clean.
 
 ## Daily workflow
 
@@ -133,10 +133,24 @@ Keep this honest and current. The judges score it.
   (`src/features/camera/features.ts`) and a 1280-number embedding from a pretrained MobileNetV2
   (`embed.ts`: ONNX model zoo, ImageNet weights, int8, 2.5 MB, run in the browser by `onnxruntime-web`
   in WebAssembly). Fused 0.7/0.3 (`fused.ts`), the crop is matched by nearest neighbour against a
-  gallery of our own labelled crops (`public/models/`, 1,920 crops from 64 photos of a mixed 30-slot
-  box across four sessions). Measured with each session held out in turn and scored against the other
-  three (`node scripts/build-gallery.ts` prints it): **99.2% top-1, 99.9% top-3** (colour alone: 92.2 /
-  96.8). The whole flow was also run in a real browser on three held-out photos: 27 of 27 pieces
+  gallery of our own labelled crops (`public/models/`, 3,570 crops drawn evenly from seven photo
+  sessions of a mixed 30-slot box — three arrangements, bright counter light through to dim). Measured
+  with each session held out in turn and scored against the other six (`node scripts/build-gallery.ts`
+  prints it): **93.5% top-1, 96.8% top-3** (colour alone: 76.1 / 83.7).
+
+  That headline number is *lower* than the 99.2% we reported on Wednesday, and the recognizer did not
+  get worse — the test got harder. Wednesday's figure came from four sessions all shot in good light;
+  the seven-session set adds two new arrangements and one deliberately dim session. Scored the old way,
+  the good-light sessions still hold: 99.7 / 99.0 / 99.5 / 100 / 95.8 / 96.7 per session. The dim
+  session is the outlier at 66.5%, and it is the honest measure of what bad light costs us.
+
+  On the failure that actually bit us during filming — an iPad video frame with specular glare from
+  film lights and a warm colour cast — the extra sessions cut wrong auto-fills from 26 to 8 per ~430
+  pieces (89% to 94% top-1), and glare-only and video-only conditions went to 100% with zero wrong
+  auto-fills. Cost: the fused gallery grows 3.2 MB -> 5.8 MB (fetched once, on first camera use) and
+  the colour gallery 752 KB -> 1.4 MB (precached, so it is on the first-load path).
+
+  The whole flow was also run in a real browser on three held-out photos: 27 of 27 pieces
   right on each, no wrong auto-fills, no confirm taps, about 2.5 s from photo to result.
   Then we broke it on purpose. 18 held-out frames, 27 conditions, through the shipped code path
   (top-1 on occupied slots; "wrong auto" is a wrong piece added without asking, the failure that costs

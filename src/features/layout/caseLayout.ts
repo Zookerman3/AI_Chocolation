@@ -33,7 +33,12 @@ export function loadLayout(): CaseLayout {
 }
 
 export function saveLayout(layout: CaseLayout): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(layout))
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(layout))
+  } catch {
+    // A tablet with no storage quota left keeps the rearranged case for this
+    // session; it just won't remember it next time. Not worth a crash.
+  }
 }
 
 export function swapCells(layout: CaseLayout, indexA: number, indexB: number): CaseLayout {

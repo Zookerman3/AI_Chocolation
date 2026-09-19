@@ -53,7 +53,9 @@ own labelled crops (`public/models/gallery-fused.{json,bin}`, 3.1 MB, built by
 confirm or fix, with a thumbnail of what the camera saw. A frame that is blurred all over is refused
 with "hold still" rather than guessed at. If the network can't load, `recognizer.ts` falls back to the
 colour-only gallery (`gallery-color`, 735 KB) and the screen says so.
-Measured with each photo session held out in turn: **99.2% top-1 / 99.9% top-3** fused (colour alone
+Measured with each photo session held out in turn, now across seven sessions including a dim one and
+three arrangements: **93.5% top-1 / 96.8% top-3** fused, good-light sessions 95.8-100% and the dim one
+66.5% (the four-session good-light-only figure was 99.2 / 99.9) (colour alone
 92.2 / 96.8; checkpoint was 80 / 95). Both galleries must be rebuilt whenever `features.ts`,
 `embed.ts`, `fused.ts` or the model file changes — the version strings in those files are baked into
 the galleries so a stale one is refused at load. `roboflowDetector.ts` stays as an opt-in override via

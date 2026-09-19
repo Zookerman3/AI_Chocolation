@@ -35,7 +35,8 @@ Source: https://www.wsuaiclub.com/hq#prompts (Build track, released Sep 13 2026,
 A tablet screen whose flavor tiles are arranged exactly like the physical display case, so the
 cashier taps where they just grabbed. Pick box size → tap a tile per piece → count shows `7 / 16` →
 undo → save only when the count matches → one record per box → CSV/JSON export → timer on every box.
-Plus a demo mode with sample boxes (judges open the link without chocolates) and a stats view.
+Plus a stats view. (The tablet's demo-mode toggle and the dashboard's sample data were both removed
+on Sep 18: every screen shows real saved boxes only, so save some before judging.)
 
 **Phase 2 (Wed–Fri): camera assist — checkpoint passed, on-device, robust.**
 Per-cell crop and match: the cashier gets the open box roughly inside an outline on screen;
@@ -50,13 +51,11 @@ own labelled crops (`public/models/gallery-fused.{json,bin}`, 3.1 MB, built by
 `node scripts/build-gallery.ts` from the crops `scripts/crop_cells.py` cuts out of the Photos folder). A cell whose winning vote share is
 ≥ 0.8 auto-adds; anything under that, or an unsure "empty", goes to the cashier for a one-tap
 confirm or fix, with a thumbnail of what the camera saw. A frame that is blurred all over is refused
-with "hold still" rather than guessed at. If the network can't load — or its whole chunk can't be
-imported, which is the failure we can't reproduce from a laptop — `config.ts` and `recognizer.ts`
-fall back to the colour-only gallery (`gallery-color`, 735 KB, in the main bundle, no WebAssembly)
-and the screen says so. Only the shell and that fallback are precached (1.2 MB); the WebAssembly
-runtime, the network and the fused gallery are cached on first camera use, because a 20 MB precache
-is how a phone ends up stuck on an old build.
-Measured with each photo session held out in turn: **99.2% top-1 / 99.9% top-3** fused (colour alone
+with "hold still" rather than guessed at. If the network can't load, `recognizer.ts` falls back to the
+colour-only gallery (`gallery-color`, 735 KB) and the screen says so.
+Measured with each photo session held out in turn, now across seven sessions including a dim one and
+three arrangements: **93.5% top-1 / 96.8% top-3** fused, good-light sessions 95.8-100% and the dim one
+66.5% (the four-session good-light-only figure was 99.2 / 99.9) (colour alone
 92.2 / 96.8; checkpoint was 80 / 95). Both galleries must be rebuilt whenever `features.ts`,
 `embed.ts`, `fused.ts` or the model file changes — the version strings in those files are baked into
 the galleries so a stale one is refused at load. `roboflowDetector.ts` stays as an opt-in override via
@@ -76,7 +75,7 @@ Shared types live in [src/domain/types.ts](src/domain/types.ts). Change them onl
 
 ### Facts to respect
 
-- 27 bonbon flavors at $3.35 each, some seasonal (25 in the public feed plus Orange and Strawberry, sold in-store only — see `src/data/flavors.local.json`). Box sizes: 6, 10, 16, 30, 50 pieces.
+- 27 bonbon flavors at $3.35 each, some seasonal (25 in the public feed plus Orange and Strawberry, sold in-store only — see `src/data/flavors.local.json`). Box sizes: 6, 10, 16, 30, 50 pieces — the tablet offers 6–30 (`OFFERED_SIZES`); 50 was taken off the picker on Sep 18 but stays in the record contract.
   Box price depends only on size, never on flavor.
 - The store's product data has **mislabeled handles**: `amaretto-copy` is Confetti Cake and
   `confetti-cake-copy` is Tea & Honey. Always identify flavors by product **title**, never by handle.
@@ -127,7 +126,7 @@ then only change files in your own area unless the issue says otherwise.
 
 | Area (folder) | What lives there | Owner |
 |---|---|---|
-| `src/app/` | App shell, navigation, demo mode | A1gUs3 |
+| `src/app/` | App shell, navigation, error boundary | A1gUs3 |
 | `src/data/` + `scripts/fetch-flavors.mjs` | Flavor catalog from the public store feed | A1gUs3 |
 | `src/features/box/` | Box session logic and the box screen | A1gUs3 |
 | `src/features/layout/` | Flavor tile grid and case layout editor | A1gUs3 |

@@ -310,6 +310,7 @@ dependency below `readCells`; feed jpeg-js RGBA), and score against `training_la
    number in `grid.ts` if not).
 5. Thursday: time 10+ boxes per method (tap vs camera), seconds per box and corrections; those
    numbers go in the video and README.
-6. Video ≤ 3 min + what-to-click-first note. Demo mode exists for judges without chocolates.
+6. Video ≤ 3 min + what-to-click-first note. The tablet's demo toggle and the dashboard's sample
+   data are gone (Sep 18): judges see real saved boxes only, so save some before Saturday.
 7. ~~Housekeeping: delete the stray `dataset_1.zip`~~ Moot: it was never committed, and the dataset
    lives in `dataset/` (#15).

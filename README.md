@@ -9,10 +9,11 @@ Our Build Track entry for the **Chocolathon** (WSU AI Club × Cocoa Dolce × Lov
 > no API key), the pieces it's sure of are added, and the rest come back as one-tap confirms.
 >
 > **Live link:** https://ai-chocolation.vercel.app (tablet + box API) · office dashboard:
-> https://case-notes-delta.vercel.app · **What to click first:** Turn on "Demo mode," then open the
-> Records and Stats tabs to see sample data without needing real chocolates on hand. On a real
-> counter, set **This tablet is at** in the footer first so every box carries its shop. With a real
-> 16 or 30 box: pick its size, tap "Use camera", get the box roughly inside the outline, Capture.
+> https://case-notes-delta.vercel.app · **What to click first:** Pick a box size, tap the tiles (or,
+> with a real 16 or 30 box, get it roughly inside the camera outline and tap Capture), then Save —
+> Records and Stats fill from what has been saved, and the office dashboard reads the same boxes
+> live. There is no sample data anywhere, so save a few boxes before showing it. On a real counter,
+> set **This tablet is at** in the footer first so every box carries its shop.
 
 Stack: React 19 + Vite + TypeScript, Vitest, ESLint; `onnxruntime-web` runs the camera's recogniser
 in WebAssembly on the device. There is no CI: `npm run check` on your own laptop is the gate before
@@ -22,7 +23,7 @@ anything merges.
 
 ## Team setup
 
-You need **Node 24 LTS** (20.19+ also works), **Git**, the **GitHub CLI** signed in (`gh auth login`), and
+You need **Node 24 LTS** (22.12+ also works; Node 20 cannot run the tests), **Git**, the **GitHub CLI** signed in (`gh auth login`), and
 **Claude Code for the terminal** signed in with your Pro/Max account.
 
 ```bash
@@ -33,7 +34,7 @@ npm run check
 ```
 
 `npm run check` should end with a successful build. If it fails on Vite or Rolldown,
-your Node is too old: `node -v` must be 20.19 or newer.
+your Node is too old: `node -v` must be 22.12 or newer. On Node 20 the suite does not merely fail, it does not start: jsdom's undici calls `worker_threads.markAsUncloneable`, which Node 20 does not have, so `npm run check` can report "no tests" and still look clean.
 
 ## Daily workflow
 
@@ -132,10 +133,24 @@ Keep this honest and current. The judges score it.
   (`src/features/camera/features.ts`) and a 1280-number embedding from a pretrained MobileNetV2
   (`embed.ts`: ONNX model zoo, ImageNet weights, int8, 2.5 MB, run in the browser by `onnxruntime-web`
   in WebAssembly). Fused 0.7/0.3 (`fused.ts`), the crop is matched by nearest neighbour against a
-  gallery of our own labelled crops (`public/models/`, 1,920 crops from 64 photos of a mixed 30-slot
-  box across four sessions). Measured with each session held out in turn and scored against the other
-  three (`node scripts/build-gallery.ts` prints it): **99.2% top-1, 99.9% top-3** (colour alone: 92.2 /
-  96.8). The whole flow was also run in a real browser on three held-out photos: 27 of 27 pieces
+  gallery of our own labelled crops (`public/models/`, 3,570 crops drawn evenly from seven photo
+  sessions of a mixed 30-slot box — three arrangements, bright counter light through to dim). Measured
+  with each session held out in turn and scored against the other six (`node scripts/build-gallery.ts`
+  prints it): **93.5% top-1, 96.8% top-3** (colour alone: 76.1 / 83.7).
+
+  That headline number is *lower* than the 99.2% we reported on Wednesday, and the recognizer did not
+  get worse — the test got harder. Wednesday's figure came from four sessions all shot in good light;
+  the seven-session set adds two new arrangements and one deliberately dim session. Scored the old way,
+  the good-light sessions still hold: 99.7 / 99.0 / 99.5 / 100 / 95.8 / 96.7 per session. The dim
+  session is the outlier at 66.5%, and it is the honest measure of what bad light costs us.
+
+  On the failure that actually bit us during filming — an iPad video frame with specular glare from
+  film lights and a warm colour cast — the extra sessions cut wrong auto-fills from 26 to 8 per ~430
+  pieces (89% to 94% top-1), and glare-only and video-only conditions went to 100% with zero wrong
+  auto-fills. Cost: the fused gallery grows 3.2 MB -> 5.8 MB (fetched once, on first camera use) and
+  the colour gallery 752 KB -> 1.4 MB (precached, so it is on the first-load path).
+
+  The whole flow was also run in a real browser on three held-out photos: 27 of 27 pieces
   right on each, no wrong auto-fills, no confirm taps, about 2.5 s from photo to result.
   Then we broke it on purpose. 18 held-out frames, 27 conditions, through the shipped code path
   (top-1 on occupied slots; "wrong auto" is a wrong piece added without asking, the failure that costs
@@ -180,7 +195,10 @@ Keep this honest and current. The judges score it.
   copper-splatter browns (Manhattan, Espresso Martini, Amaretto, Champagne, Turtle) under a strong
   colour cast or heavy noise, which is what the "please confirm" step is for. The gallery holds one
   physical piece per flavor, photographed 64 times; a second box of each would tighten it further.
-  Roboflow remains an opt-in override (`.env.example`) if a hosted detector ever beats this.
+  Roboflow remains an opt-in override (`.env.example`) if a hosted detector ever beats this. A second
+  photo of the same box doesn't double-count: every camera-read piece remembers its insert slot, a
+  slot already filled is skipped, and the screen says how many it skipped — so two of the same flavor
+  in two slots still count as two. (The Roboflow override reports no slots, so it has no such guard.)
 - **The camera needs enough pieces in the box to find the grid, and a real-angle check.** The
   grid-finder needs about a third of the slots filled (8 pieces in a 30, 5 in a 16, 4 in a 6 or 10)
   to lock on; below that it falls back to reading the outline as drawn, which is when "roughly lined
@@ -188,7 +206,8 @@ Keep this honest and current. The judges score it.
   shows its side and the divider wall starts hiding it, and that is what still needs six real photos
   to confirm, and maybe one angled shoot to add to the gallery if it doesn't hold. Only inserts we've
   measured are supported: 4×4 (16) and 5×6 (30); 6 and 10 are assumed 2×3 / 2×5 and need checking
-  against real boxes; 50 stays tap-only. Where the live preview isn't available (an `http://` dev
+  against real boxes; the 50-piece box is no longer offered on the tablet at all (taken off the size
+  picker on Sep 18, since it has no measured insert). Where the live preview isn't available (an `http://` dev
   server on a phone, or a denied permission) it falls back to the OS camera and the same grid-finder
   reads the photo. The app itself is about 1.2 MB and is precached on first visit; the recognizer's
   big files (the 14 MB WebAssembly runtime — 3.7 MB compressed — the 2.5 MB network and the 3.1 MB
@@ -241,11 +260,13 @@ Keep this honest and current. The judges score it.
   catches a mismatched *count*, not a mismatched *flavor*. The new allergen badges and search box help
   a cashier double-check a specific flavor by name rather than relying on the photo alone, but don't
   eliminate this.
-- **A large box.** Works up to 50 pieces (tested). The running tally's `+` button lets a cashier add
-  repeats of a flavor already in the box without re-finding its tile in the grid, which cuts down the
-  search-and-tap cost for a big box — but it's still one count per tap, so a 50-piece box is
-  meaningfully slower than a 6-piece one, and each tap is still a chance to mis-tap. Exactly why the
-  50-piece box needs its own real timing pass on Thursday, not just the 6-piece one.
+- **A large box.** The picker goes up to 30 pieces (tested); the 50-piece box was taken off it on
+  Sep 18 (no measured insert, so no camera path), though a saved 50-piece record is still valid data.
+  The running tally's `+` button lets a cashier add repeats of a flavor already in the box without
+  re-finding its tile in the grid, which cuts down the search-and-tap cost for a big box — but it's
+  still one count per tap, so a 30-piece box is meaningfully slower than a 6-piece one, and each tap
+  is still a chance to mis-tap. Exactly why the 30-piece box needs its own real timing pass on
+  Thursday, not just the 6-piece one.
 - The overnight runner detects the Claude usage limit by matching the error text. If Claude changes
   that message, the runner will mark the issue `agent-failed` instead of requeueing it.
 - There is no CI and `main` is unprotected. If someone merges without running `npm run check`, `main` can

@@ -198,13 +198,13 @@ Keep this honest and current. The judges score it.
   It does not authenticate anybody. Reads are public with no token at all, on purpose: the
   rubric's first gate is that the link opens with no login and no install.
 
-- **There is no per-tablet identity.** `locationId` is optional on the record, and the
-  tablet app's `src/domain/types.ts` does not currently carry the field or set it — only
-  the dashboard's copy and `api/_lib/record.ts` know about it. So today every box arrives
-  unattributed, the API's `?location=` filter matches nothing, and the dashboard's location
-  filter hides itself rather than offering a single useless option. Making this work is an
-  additive change on the tablet side (set `locationId` per device at save time); nothing on
-  the server or the dashboard needs to move.
+- **Per-tablet identity is set, but only if somebody sets it.** The tablet carries
+  `locationId` (`src/domain/types.ts`) and `toRecord` stamps it from `loadLocationId()` at
+  save time, chosen once per device in the footer's "This tablet is at" picker. A tablet
+  where nobody picked one still saves boxes with no location, so the API's `?location=`
+  filter will not match them and the dashboard hides its location filter rather than
+  offering a useless option. The failure is now a setup step somebody skipped, not a
+  missing feature.
 
 - **Acknowledged ids live in the same localStorage that clearing site data wipes.** The set
   is `ai-chocolation:synced-ids`, in the tablet's own localStorage, capped at 5000 ids. Clear
@@ -222,14 +222,12 @@ Keep this honest and current. The judges score it.
   server if the tablet re-posts it under the same id — and the tablet will not, because that
   id is already in the acknowledged set.
 
-- **The tablet's CSV export has no `location_id` column, so the file-import path loses
-  location.** The tablet's `toCSV` writes eleven columns: `box_id`, `box_size`, `method`,
-  `demo`, `started_at`, `completed_at`, `duration_ms`, `undo_count`, `flavor_id`,
-  `flavor_name`, `piece_count`. The dashboard's CSV importer already reads a `location_id`
-  column if one is present — it just never is. So once `locationId` does get set, a record
-  that arrives over the live API will carry its location and the same record exported to CSV
-  and dragged in will not. The JSON export does not have this problem; it serialises the
-  record whole.
+- **The CSV export carries location.** `toCSV` writes twelve columns: `box_id`,
+  `box_size`, `method`, `demo`, `location_id`, `started_at`, `completed_at`, `duration_ms`,
+  `undo_count`, `flavor_id`, `flavor_name`, `piece_count` — one row per flavor within a box.
+  The dashboard's importer reads `location_id` when present, so the live-API path and the
+  drag-in-a-file path now agree. A box saved before a location was picked exports an empty
+  `location_id`, which the importer treats as unattributed.
 
 - **`from`/`to` filter on `completedAt`, not `receivedAt`.** A box assembled Tuesday and
   synced Thursday lands in Tuesday's window. That is almost always what you want, but it

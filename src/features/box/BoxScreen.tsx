@@ -11,6 +11,10 @@ import { gridFor } from '../camera/grid.ts'
 
 interface BoxScreenProps { onSaved?: () => void }
 
+// The tally is one column on a portrait iPad until it has this many flavors; past
+// that it would run off the bottom of the screen, so it splits into two columns.
+export const TALLY_TWO_COLUMNS_FROM = 8
+
 export function BoxScreen({ onSaved }: BoxScreenProps) {
   const [layout, setLayout] = useState(() => loadLayout())
   const [session, setSession] = useState<BoxSession | null>(null)
@@ -62,7 +66,7 @@ export function BoxScreen({ onSaved }: BoxScreenProps) {
         <FlavorGrid layout={layout} onTapCell={tapCell} disabled={complete} />
       </>}
     </div>
-    <aside className="tally-panel"><div className="tally-header"><div><p className="eyebrow">Your box</p><h3>{currentTally.length === 0 ? 'Nothing picked yet' : `${currentTally.length} flavor${currentTally.length === 1 ? '' : 's'}`}</h3></div><span className="tally-count">{session.pieces.length}/{session.size}</span></div>{currentTally.length === 0 ? <div className="empty-tally"><span aria-hidden="true">✦</span><p>Start with a favorite<br />from the case.</p></div> : <ul className="box-tally">{currentTally.map(({ flavorId, count }) => <li key={flavorId}><span className="tally-swatch" style={{ backgroundImage: `url(${flavorOrPlaceholder(flavorId).imageUrl})` }} /><span className="box-tally-name">{flavorOrPlaceholder(flavorId).name}</span><button type="button" className="box-tally-step" aria-label={`Remove one ${flavorOrPlaceholder(flavorId).name}`} onClick={() => setSession(removeOne(session, flavorId))}>−</button><span className="box-tally-count">×{count}</span><button type="button" className="box-tally-step" aria-label={`Add one more ${flavorOrPlaceholder(flavorId).name}`} disabled={complete} onClick={() => setSession(addPiece(session, flavorId))}>+</button></li>)}</ul>}
+    <aside className="tally-panel"><div className="tally-header"><div><p className="eyebrow">Your box</p><h3>{currentTally.length === 0 ? 'Nothing picked yet' : `${currentTally.length} flavor${currentTally.length === 1 ? '' : 's'}`}</h3></div><span className="tally-count">{session.pieces.length}/{session.size}</span></div>{currentTally.length === 0 ? <div className="empty-tally"><span aria-hidden="true">✦</span><p>Start with a favorite<br />from the case.</p></div> : <ul className={`box-tally${currentTally.length >= TALLY_TWO_COLUMNS_FROM ? ' box-tally--two-col' : ''}`}>{currentTally.map(({ flavorId, count }) => <li key={flavorId}><span className="tally-swatch" style={{ backgroundImage: `url(${flavorOrPlaceholder(flavorId).imageUrl})` }} /><span className="box-tally-name">{flavorOrPlaceholder(flavorId).name}</span><button type="button" className="box-tally-step" aria-label={`Remove one ${flavorOrPlaceholder(flavorId).name}`} onClick={() => setSession(removeOne(session, flavorId))}>−</button><span className="box-tally-count">×{count}</span><button type="button" className="box-tally-step" aria-label={`Add one more ${flavorOrPlaceholder(flavorId).name}`} disabled={complete} onClick={() => setSession(addPiece(session, flavorId))}>+</button></li>)}</ul>}
       {saveError && <p role="alert" className="helper-text">{saveError}</p>}
       <div className="box-actions"><button type="button" className="button button-light" onClick={() => setShowCamera(true)} disabled={complete || !gridFor(session.size)} title={gridFor(session.size) ? undefined : `No measured insert for the ${session.size}-piece box yet`}>◎ Use camera</button><button type="button" aria-label="Undo" className="button button-light" onClick={() => setSession(undoLast(session))} disabled={session.pieces.length === 0}>↶ Undo</button><button type="button" className="button button-quiet" onClick={cancel}>Cancel</button><button type="button" className="button button-accent" onClick={save} disabled={!complete}>Save box <span aria-hidden="true">→</span></button></div>
     </aside>

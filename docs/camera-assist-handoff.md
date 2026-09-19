@@ -43,7 +43,12 @@ Pipeline, all in `src/features/camera/`, in the order a photo goes through it:
    (`PendingRow`: thumbnail, "Row r, slot c", flavor dropdown).
 2. `config.ts` — `detectorKind` is `'roboflow'` only when both `VITE_ROBOFLOW_*` vars are set,
    otherwise `'local'`. `preloadRecognizer()` lazy-imports `recognizer.ts` so the WebAssembly runtime
-   stays out of the main bundle (it's a separate chunk).
+   stays out of the main bundle (it's a separate chunk), caches the promise, and **if that import
+   rejects, falls back to a colour-only recognizer built from `gallery-color`** — which is in the
+   main bundle and needs no WebAssembly — so a device that can't run the network still gets a
+   working camera (measured with the chunk blocked: 24/27 auto-added, 0 wrong, 3 confirms, 0.6 s).
+   Before that fallback existed, a failed chunk import left Capture permanently disabled. That is
+   what the "failure to import module" report from an iPhone on Sep 17 hit.
 3. `recognizer.ts` — loads `public/models/mobilenetv2.onnx` (2.5 MB) with `onnxruntime-web/wasm`
    (one thread, `.wasm` served from the app via a `?url` import, no CDN, no WebGPU because it crashes
    iOS Safari) and the fused gallery; on any failure falls back to the colour gallery and returns
@@ -84,8 +89,9 @@ Pipeline, all in `src/features/camera/`, in the order a photo goes through it:
 Also: `roboflowDetector.ts` (opt-in override), `stubDetector.ts` (sees nothing; tests/demos),
 `types.ts` (`Detection`, `FlavorDetector`). Tests sit next to each file; `gridFinder.test.ts` draws
 synthetic frames, `localDetector.test.ts` uses a fake embedder and toy galleries, `embed.test.ts`
-checks the tensor layout and the fusion arithmetic. `vite.config.ts` precaches `onnx`/`wasm` with a
-20 MB per-file cap; `.gitattributes` marks `*.onnx` and `*.bin` binary.
+checks the tensor layout and the fusion arithmetic. `vite.config.ts` precaches only the shell and the
+colour fallback (1.2 MB) and runtime-caches the big three (wasm, onnx, `gallery-fused.bin`)
+cache-first under `camera-recognizer`; `.gitattributes` marks `*.onnx` and `*.bin` binary.
 
 ### Rebuilding the galleries
 

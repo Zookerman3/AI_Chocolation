@@ -1,8 +1,8 @@
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { StrictMode } from 'react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { StrictMode, useState } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CameraScreen } from './CameraScreen.tsx'
-import { startSession } from '../box/boxSession.ts'
+import { addPiece, startSession } from '../box/boxSession.ts'
 import { FLAVORS } from '../../data/flavors.ts'
 import { outlineHomography } from './gridFinder.ts'
 import { outlineRect } from './grid.ts'
@@ -96,6 +96,32 @@ describe('CameraScreen', () => {
     expect(screen.queryByText('Please confirm')).not.toBeInTheDocument()
   })
 
+  it('a second photo of the same box does not add its pieces again, and says so', async () => {
+    // The screen gets its session from the parent, so give it a real one that updates.
+    function Harness() {
+      const [session, setSession] = useState(() => startSession(6, 1000))
+      return (
+        <>
+          <span data-testid="count">{session.pieces.length}</span>
+          <CameraScreen session={session} onSessionChange={setSession} onManual={vi.fn()} />
+        </>
+      )
+    }
+    detectMock.mockResolvedValue([
+      { flavorId: a.id, confidence: 0.95, box: { x: 0, y: 0, width: 0.1, height: 0.1 }, rawClass: a.id, cell: { row: 1, col: 1 } },
+      { flavorId: a.id, confidence: 0.95, box: { x: 0.2, y: 0, width: 0.1, height: 0.1 }, rawClass: a.id, cell: { row: 1, col: 2 } },
+    ])
+    render(<Harness />)
+
+    uploadPhoto()
+    await waitFor(() => expect(screen.getByTestId('count')).toHaveTextContent('2'))
+
+    uploadPhoto()
+    await waitFor(() => expect(screen.getByText(/already counted from an earlier photo/)).toBeInTheDocument())
+    expect(screen.getByTestId('count')).toHaveTextContent('2')
+    expect(screen.getByText(/2 pieces were already counted/)).toBeInTheDocument()
+  })
+
   it('shows a clear error if detection fails, instead of silently doing nothing', async () => {
     detectMock.mockRejectedValue(new Error('Roboflow inference failed: 500 Internal Server Error'))
     render(<CameraScreen session={startSession(6, 1000)} onSessionChange={vi.fn()} onManual={vi.fn()} />)
@@ -131,6 +157,33 @@ describe('CameraScreen', () => {
     uploadPhoto()
     await waitFor(() => expect(onComplete).toHaveBeenCalledOnce())
     expect(current.pieces).toHaveLength(6)
+  })
+
+  it('hands over when confirming a review row is what fills the box', async () => {
+    let current = startSession(6, 1000)
+    for (let i = 0; i < 5; i++) current = addPiece(current, a.id)
+    detectMock.mockResolvedValue([
+      { flavorId: b.id, confidence: 0.4, box: { x: 0, y: 0, width: 0.1, height: 0.1 }, rawClass: b.id, cell: { row: 1, col: 6 } },
+    ])
+    const onComplete = vi.fn()
+    render(
+      <CameraScreen
+        session={current}
+        onSessionChange={(s) => {
+          current = s
+        }}
+        onManual={vi.fn()}
+        onComplete={onComplete}
+      />,
+    )
+
+    uploadPhoto()
+    await waitFor(() => expect(screen.getByText('Please confirm')).toBeInTheDocument())
+    expect(onComplete).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
+    expect(current.pieces).toHaveLength(6)
+    expect(onComplete).toHaveBeenCalledOnce()
   })
 
   it('stays on the camera while the box is still short, with the result above the capture card', async () => {

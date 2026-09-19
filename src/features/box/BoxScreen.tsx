@@ -51,12 +51,16 @@ export function BoxScreen({ onSaved }: BoxScreenProps) {
   const currentTally = tally(session)
   const remaining = session.size - session.pieces.length
 
-  return <section aria-labelledby="assemble-heading" className="assembly-layout">
+  // A full box has nothing left to tap: the grid gives way to the list of what is
+  // in it and the Save button, and comes back the moment a piece is taken out.
+  return <section aria-labelledby="assemble-heading" className={`assembly-layout${complete ? ' assembly-layout--complete' : ''}`}>
     <div className="assembly-main">
-      <div className="box-toolbar"><div><p className="eyebrow">Live box</p><h2 id="assemble-heading" aria-label={`${session.pieces.length} / ${session.size}`}>Pick the flavors</h2></div><div className="timer-pill"><span className="pulse-dot" /> {elapsedSeconds}s</div></div>
+      <div className="box-toolbar"><div><p className="eyebrow">Live box</p><h2 id="assemble-heading" aria-label={`${session.pieces.length} / ${session.size}`}>{complete ? 'Check the box' : 'Pick the flavors'}</h2></div><div className="timer-pill"><span className="pulse-dot" /> {elapsedSeconds}s</div></div>
       <div className={`progress-card ${complete ? 'is-complete' : ''}`}><div><span className="progress-label">{complete ? 'Box ready to save' : 'Pieces selected'}</span><strong>{session.pieces.length}<small> / {session.size}</small></strong></div><div className="progress-track"><span style={{ width: `${(session.pieces.length / session.size) * 100}%` }} /></div><span className="remaining-label">{complete ? 'All set!' : `${remaining} left`}</span></div>
-      <div className="grid-toolbar"><span className="tap-hint">Tap a chocolate to add it</span></div>
-      <FlavorGrid layout={layout} onTapCell={tapCell} disabled={complete} />
+      {complete ? <p className="helper-text">Everything is in the box. Check the list, then save — or take a piece out to change it.</p> : <>
+        <div className="grid-toolbar"><span className="tap-hint">Tap a chocolate to add it</span></div>
+        <FlavorGrid layout={layout} onTapCell={tapCell} disabled={complete} />
+      </>}
     </div>
     <aside className="tally-panel"><div className="tally-header"><div><p className="eyebrow">Your box</p><h3>{currentTally.length === 0 ? 'Nothing picked yet' : `${currentTally.length} flavor${currentTally.length === 1 ? '' : 's'}`}</h3></div><span className="tally-count">{session.pieces.length}/{session.size}</span></div>{currentTally.length === 0 ? <div className="empty-tally"><span aria-hidden="true">✦</span><p>Start with a favorite<br />from the case.</p></div> : <ul className="box-tally">{currentTally.map(({ flavorId, count }) => <li key={flavorId}><span className="tally-swatch" style={{ backgroundImage: `url(${flavorOrPlaceholder(flavorId).imageUrl})` }} /><span className="box-tally-name">{flavorOrPlaceholder(flavorId).name}</span><button type="button" className="box-tally-step" aria-label={`Remove one ${flavorOrPlaceholder(flavorId).name}`} onClick={() => setSession(removeOne(session, flavorId))}>−</button><span className="box-tally-count">×{count}</span><button type="button" className="box-tally-step" aria-label={`Add one more ${flavorOrPlaceholder(flavorId).name}`} disabled={complete} onClick={() => setSession(addPiece(session, flavorId))}>+</button></li>)}</ul>}
       {saveError && <p role="alert" className="helper-text">{saveError}</p>}

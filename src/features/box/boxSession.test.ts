@@ -78,6 +78,37 @@ describe('boxSession', () => {
     ])
   })
 
+  it('tally lists camera-read flavors in box order, even one confirmed late from the review list', () => {
+    // The camera auto-added slots 1 and 3 of a row, and slot 2 came back as "please
+    // confirm". The cashier confirms it last, so it is the last piece added — but the
+    // check list must still read like the box: slot 1, slot 2, slot 3.
+    let session = startSession(6, 1000)
+    session = addPiece(session, 'raspberry', 'camera', 0.95, 1000, { row: 1, col: 1 })
+    session = addPiece(session, 'turtle', 'camera', 0.91, 1000, { row: 1, col: 3 })
+    session = addPiece(session, 'amaretto', 'camera', 0.62, 1000, { row: 1, col: 2 })
+    expect(tally(session).map((t) => t.flavorId)).toEqual(['raspberry', 'amaretto', 'turtle'])
+  })
+
+  it('tally orders slots row by row, and a flavor sits at its earliest slot', () => {
+    let session = startSession(10, 1000)
+    session = addPiece(session, 'turtle', 'camera', 0.9, 1000, { row: 2, col: 1 })
+    session = addPiece(session, 'lemon', 'camera', 0.9, 1000, { row: 1, col: 5 })
+    session = addPiece(session, 'turtle', 'camera', 0.9, 1000, { row: 1, col: 2 })
+    expect(tally(session)).toEqual([
+      { flavorId: 'turtle', count: 2 }, // earliest slot is row 1 col 2
+      { flavorId: 'lemon', count: 1 },
+    ])
+  })
+
+  it('tally puts tapped flavors after camera-read ones, in first-tap order', () => {
+    let session = startSession(6, 1000)
+    session = addPiece(session, 'lemon') // tapped first, before the photo
+    session = addPiece(session, 'turtle', 'camera', 0.9, 1000, { row: 1, col: 2 })
+    session = addPiece(session, 'pistachio') // tapped to fill the last slot
+    session = addPiece(session, 'amaretto', 'camera', 0.9, 1000, { row: 1, col: 1 })
+    expect(tally(session).map((t) => t.flavorId)).toEqual(['amaretto', 'turtle', 'lemon', 'pistachio'])
+  })
+
   it('removeOne removes a single piece of the given flavor, not the last tap overall', () => {
     let session = startSession(6, 1000)
     session = addPiece(session, 'amaretto')

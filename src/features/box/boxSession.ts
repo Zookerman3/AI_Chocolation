@@ -70,16 +70,40 @@ export interface FlavorTally {
   count: number
 }
 
-/** Collapses the session's pieces into per-flavor counts, in the order each
- * flavor was first tapped. Used for both the live running tally in the UI and
- * the saved record, so what the cashier sees while assembling is exactly what
- * gets saved. */
+/** Collapses the session's pieces into per-flavor counts. Used for both the live
+ * running tally in the UI and the saved record, so what the cashier sees while
+ * assembling is exactly what gets saved.
+ *
+ * Order: a flavor the camera read sits where its first slot is in the insert
+ * (row by row, left to right), so the list reads like the open box. That holds
+ * even when a slot was only confirmed from the review list after the sure ones
+ * were auto-added — the piece lands late in `pieces`, but not late in the box.
+ * Flavors with no slot (tapped) follow, in the order each was first tapped. */
 export function tally(session: BoxSession): FlavorTally[] {
   const counts = new Map<FlavorId, number>()
+  const firstSlot = new Map<FlavorId, number>()
   for (const piece of session.pieces) {
     counts.set(piece.flavorId, (counts.get(piece.flavorId) ?? 0) + 1)
+    if (piece.cell) {
+      const slot = readingOrder(piece.cell)
+      firstSlot.set(piece.flavorId, Math.min(firstSlot.get(piece.flavorId) ?? Infinity, slot))
+    }
   }
-  return [...counts.entries()].map(([flavorId, count]) => ({ flavorId, count }))
+  const slotOf = (flavorId: FlavorId) => firstSlot.get(flavorId) ?? Infinity
+  return [...counts.entries()]
+    .map(([flavorId, count]) => ({ flavorId, count }))
+    .sort((a, b) => {
+      const sa = slotOf(a.flavorId)
+      const sb = slotOf(b.flavorId)
+      if (sa === sb) return 0 // both tapped, or the same slot: keep first-seen order (sort is stable)
+      return sa < sb ? -1 : 1
+    })
+}
+
+/** A slot's position reading the insert row by row. No insert is wider than 100
+ * columns, so this never collides across rows. */
+function readingOrder(cell: NonNullable<Piece['cell']>): number {
+  return cell.row * 100 + cell.col
 }
 
 /** Turns a complete session into a saved record. Throws on an incomplete box: the

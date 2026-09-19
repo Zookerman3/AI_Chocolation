@@ -190,8 +190,18 @@ Keep this honest and current. The judges score it.
   measured are supported: 4×4 (16) and 5×6 (30); 6 and 10 are assumed 2×3 / 2×5 and need checking
   against real boxes; 50 stays tap-only. Where the live preview isn't available (an `http://` dev
   server on a phone, or a denied permission) it falls back to the OS camera and the same grid-finder
-  reads the photo. First open downloads about 20 MB (the WebAssembly runtime is 14 MB of it, 3.7 MB
-  compressed); after that everything is cached offline.
+  reads the photo. The app itself is about 1.2 MB and is precached on first visit; the recognizer's
+  big files (the 14 MB WebAssembly runtime — 3.7 MB compressed — the 2.5 MB network and the 3.1 MB
+  fused gallery) download the first time the camera is opened and are cached from then on, so the
+  second box works with the wifi down.
+- **If the recognizer won't load, the camera drops to colour matching rather than dying.** The
+  WebAssembly half is the one part we cannot test on every device that might open the link, so it is
+  not allowed to take the camera down with it: if that chunk fails for any reason — an old browser,
+  a phone that won't keep 14 MB, a service worker holding a stale build — the app falls back to the
+  colour-only gallery, which is in the main bundle and needs no WebAssembly, and the screen says
+  "basic colour matching" so nobody thinks they're getting the good numbers. Measured with the
+  recognizer chunk blocked outright, on a held-out 30-box photo: 24 of 27 pieces auto-added, none
+  wrong, 3 sent for a one-tap confirm, in 0.6 s. That is the 92% column of the table above, working.
 - **The device is the source of truth; the server is a copy.** Records live in the browser's
   localStorage, per device, with no login. Each saved box is also posted to `/api/boxes` on the same
   origin (queued when offline, retried on reconnect), which is what the office dashboard reads.

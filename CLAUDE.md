@@ -50,8 +50,12 @@ own labelled crops (`public/models/gallery-fused.{json,bin}`, 3.1 MB, built by
 `node scripts/build-gallery.ts` from the crops `scripts/crop_cells.py` cuts out of the Photos folder). A cell whose winning vote share is
 ≥ 0.8 auto-adds; anything under that, or an unsure "empty", goes to the cashier for a one-tap
 confirm or fix, with a thumbnail of what the camera saw. A frame that is blurred all over is refused
-with "hold still" rather than guessed at. If the network can't load, `recognizer.ts` falls back to the
-colour-only gallery (`gallery-color`, 735 KB) and the screen says so.
+with "hold still" rather than guessed at. If the network can't load — or its whole chunk can't be
+imported, which is the failure we can't reproduce from a laptop — `config.ts` and `recognizer.ts`
+fall back to the colour-only gallery (`gallery-color`, 735 KB, in the main bundle, no WebAssembly)
+and the screen says so. Only the shell and that fallback are precached (1.2 MB); the WebAssembly
+runtime, the network and the fused gallery are cached on first camera use, because a 20 MB precache
+is how a phone ends up stuck on an old build.
 Measured with each photo session held out in turn: **99.2% top-1 / 99.9% top-3** fused (colour alone
 92.2 / 96.8; checkpoint was 80 / 95). Both galleries must be rebuilt whenever `features.ts`,
 `embed.ts`, `fused.ts` or the model file changes — the version strings in those files are baked into
